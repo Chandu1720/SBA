@@ -74,7 +74,7 @@ const Dashboard = () => {
         const paidBills = bills.data
           .filter((b) => b.paymentStatus === 'Paid')
           .reduce((acc, curr) => acc + curr.grandTotal, 0);
-        setTotalPaid(paidInvoices + paidBills);
+        setTotalPaid(paidInvoices );
       } catch (err) {
         console.error('Error fetching data:', err);
         setError('Failed to load dashboard data.');
