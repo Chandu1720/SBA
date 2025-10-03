@@ -25,7 +25,7 @@ const Signup = ({ setToken }) => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/register`, { name, email, password });
+      const response = await axios.post(`/api/auth/register`, { name, email, password });
       setToken(response.data.token);
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');

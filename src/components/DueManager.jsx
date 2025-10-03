@@ -8,7 +8,7 @@ const DueManager = () => {
 
   const fetchDues = useCallback(() => {
     if (activeTab === 'supplierDues') {
-      axios.get(`${process.env.REACT_APP_API_URL}/api/dues/suppliers`)
+      axios.get(`/api/dues/suppliers`)
         .then(response => {
           console.log('Supplier Dues:', response.data);
           setSupplierDues(response.data);
@@ -17,7 +17,7 @@ const DueManager = () => {
           console.error('There was an error fetching the supplier dues!', error);
         });
     } else if (activeTab === 'customerDues') {
-      axios.get(`${process.env.REACT_APP_API_URL}/api/dues/customers`)
+      axios.get(`/api/dues/customers`)
         .then(response => {
           console.log('Customer Dues:', response.data);
           setCustomerDues(response.data);
@@ -32,17 +32,17 @@ const handleClear = async (id, type) => {
   try {
     if (type === 'supplier') {
       // First fetch the invoice so we know the total amount
-      const { data: invoice } = await axios.get(`${process.env.REACT_APP_API_URL}/api/invoices/${id}`);
+      const { data: invoice } = await axios.get(`/api/invoices/${id}`);
       
-      await axios.put(`${process.env.REACT_APP_API_URL}/api/invoices/${id}`, {
+      await axios.put(`/api/invoices/${id}`, {
         paymentStatus: 'Paid',
         paidAmount: invoice.amount,  // set paidAmount equal to full amount
       });
     } else if (type === 'customer') {
       // Fetch the bill so we know the total
-      const { data: bill } = await axios.get(`${process.env.REACT_APP_API_URL}/api/bills/${id}`);
+      const { data: bill } = await axios.get(`/api/bills/${id}`);
       
-      await axios.put(`${process.env.REACT_APP_API_URL}/api/bills/${id}`, {
+      await axios.put(`/api/bills/${id}`, {
         paymentStatus: 'Paid',
         paidAmount: bill.grandTotal,  // set paidAmount equal to total bill
       });
@@ -59,7 +59,7 @@ const handleClear = async (id, type) => {
     if (type === 'supplier') {
       await Promise.all(
         supplierDues.map(async (invoice) => {
-          await axios.put(`${process.env.REACT_APP_API_URL}/api/invoices/${invoice._id}`, {
+          await axios.put(`/api/invoices/${invoice._id}`, {
             paymentStatus: 'Paid',
             paidAmount: invoice.amount,
           });
@@ -68,7 +68,7 @@ const handleClear = async (id, type) => {
     } else if (type === 'customer') {
       await Promise.all(
         customerDues.map(async (bill) => {
-          await axios.put(`${process.env.REACT_APP_API_URL}/api/bills/${bill._id}`, {
+          await axios.put(`/api/bills/${bill._id}`, {
             paymentStatus: 'Paid',
             paidAmount: bill.grandTotal,
           });

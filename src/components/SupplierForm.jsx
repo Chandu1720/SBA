@@ -26,7 +26,7 @@ const SupplierForm = ({ suppliers, setSuppliers }) => {
         setSupplierForm(supplier);
       } else {
         // Fetch from API if not found in local state (optional enhancement)
-        axios.get(`${process.env.REACT_APP_API_URL}/api/suppliers/${id}`)
+        axios.get(`/api/suppliers/${id}`)
           .then(response => {
             setSupplierForm(response.data);
           })
@@ -50,7 +50,7 @@ const SupplierForm = ({ suppliers, setSuppliers }) => {
 
     if (isEditMode) {
       // Update existing supplier
-      axios.put(`${process.env.REACT_APP_API_URL}/api/suppliers/${id}`, supplierForm)
+      axios.put(`/api/suppliers/${id}`, supplierForm)
         .then(response => {
           setSuppliers(suppliers.map(sup => (sup._id === id ? response.data : sup)));
           navigate('/suppliers');
@@ -60,7 +60,7 @@ const SupplierForm = ({ suppliers, setSuppliers }) => {
         });
     } else {
       // Add new supplier
-      axios.post(`${process.env.REACT_APP_API_URL}/api/suppliers`, supplierForm)
+      axios.post(`/api/suppliers`, supplierForm)
         .then(response => {
           setSuppliers([...suppliers, response.data]);
           navigate('/suppliers');

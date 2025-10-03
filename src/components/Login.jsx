@@ -16,7 +16,7 @@ const Login = ({ setToken }) => {
     setError('');
 
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/login`, { email, password });
+      const response = await axios.post(`/api/auth/login`, { email, password });
       setToken(response.data.token);
     } catch (err) {
       setError('Invalid email or password. Please try again.');
