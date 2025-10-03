@@ -9,7 +9,7 @@ const BillList = ({ bills, setBills }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/bills')
+    axios.get(`${process.env.REACT_APP_API_URL}/api/bills`)
       .then(response => {
         setBills(response.data);
         setLoading(false);

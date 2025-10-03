@@ -6,7 +6,7 @@ import axios from 'axios';
 const SupplierList = ({ suppliers, setSuppliers }) => {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    axios.get('http://localhost:5000/api/suppliers')
+    axios.get(`${process.env.REACT_APP_API_URL}/api/suppliers`)
       .then(response => {
         setSuppliers(response.data);
         setLoading(false);
@@ -20,7 +20,7 @@ const SupplierList = ({ suppliers, setSuppliers }) => {
   const handleDelete = (id) => {
     if (!window.confirm('Are you sure you want to delete this supplier?')) return;
 
-    axios.delete(`http://localhost:5000/api/suppliers/${id}`)
+    axios.delete(`${process.env.REACT_APP_API_URL}/api/suppliers/${id}`)
       .then(() => {
         setSuppliers(suppliers.filter(sup => sup._id !== id));
       })

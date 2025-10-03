@@ -7,7 +7,7 @@ const InvoiceList = ({ suppliers = [], invoices, setInvoices }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/invoices')
+    axios.get(`${process.env.REACT_APP_API_URL}/api/invoices`)
       .then(response => {
         setInvoices(response.data);
         setLoading(false);

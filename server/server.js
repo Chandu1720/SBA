@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 app.use(cors());
@@ -243,6 +244,16 @@ app.delete('/api/dues/customers', async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, '../build')));
+
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../build/index.html'));
+});
+
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

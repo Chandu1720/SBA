@@ -32,7 +32,7 @@ const BillForm = ({ bills, setBills }) => {
         });
       } else {
         // Fallback: fetch from API
-        axios.get(`http://localhost:5000/api/bills/${id}`)
+        axios.get(`${process.env.REACT_APP_API_URL}/api/bills/${id}`)
           .then(response => {
             const b = response.data;
             setBillForm({
@@ -103,7 +103,7 @@ const BillForm = ({ bills, setBills }) => {
     };
 
     if (isEditMode) {
-      axios.put(`http://localhost:5000/api/bills/${id}`, billData)
+      axios.put(`${process.env.REACT_APP_API_URL}/api/bills/${id}`, billData)
         .then(response => {
           setBills(bills.map(b => (b._id === id ? response.data : b)));
           navigate('/bills');
@@ -112,7 +112,7 @@ const BillForm = ({ bills, setBills }) => {
           console.error('There was an error updating the bill!', error);
         });
     } else {
-      axios.post('http://localhost:5000/api/bills', billData)
+      axios.post(`${process.env.REACT_APP_API_URL}/api/bills`, billData)
         .then(response => {
           setBills([...bills, response.data]);
           navigate('/bills');

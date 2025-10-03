@@ -33,7 +33,7 @@ const InvoiceForm = ({ suppliers = [], invoices, setInvoices }) => {
         });
       } else {
         // Fallback: fetch from API if not in local state
-        axios.get(`http://localhost:5000/api/invoices/${id}`)
+        axios.get(`${process.env.REACT_APP_API_URL}/api/invoices/${id}`)
           .then(response => {
             const inv = response.data;
             setInvoiceForm({
@@ -94,7 +94,7 @@ const handleInvoiceChange = (e) => {
 
     if (isEditMode) {
       // Update invoice
-      axios.put(`http://localhost:5000/api/invoices/${id}`, invoiceData)
+      axios.put(`${process.env.REACT_APP_API_URL}/api/invoices/${id}`, invoiceData)
         .then(response => {
           setInvoices(invoices.map(inv => (inv._id === id ? response.data : inv)));
           navigate('/invoices');
@@ -104,7 +104,7 @@ const handleInvoiceChange = (e) => {
         });
     } else {
       // Add new invoice
-      axios.post('http://localhost:5000/api/invoices', invoiceData)
+      axios.post(`${process.env.REACT_APP_API_URL}/api/invoices`, invoiceData)
         .then(response => {
           setInvoices([...invoices, response.data]);
           navigate('/invoices');

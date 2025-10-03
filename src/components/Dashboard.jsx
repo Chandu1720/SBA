@@ -45,11 +45,11 @@ const Dashboard = () => {
         setLoading(true);
         const [suppliers, invoices, bills, dueSuppliers, dueCustomers] =
           await Promise.all([
-            axios.get('http://localhost:5000/api/suppliers'),
-            axios.get('http://localhost:5000/api/invoices'),
-            axios.get('http://localhost:5000/api/bills'),
-            axios.get('http://localhost:5000/api/dues/suppliers'),
-            axios.get('http://localhost:5000/api/dues/customers'),
+            axios.get(`${process.env.REACT_APP_API_URL}/api/suppliers`),
+            axios.get(`${process.env.REACT_APP_API_URL}/api/invoices`),
+            axios.get(`${process.env.REACT_APP_API_URL}/api/bills`),
+            axios.get(`${process.env.REACT_APP_API_URL}/api/dues/suppliers`),
+            axios.get(`${process.env.REACT_APP_API_URL}/api/dues/customers`),
           ]);
 
         setSupplierCnt(suppliers.data);
