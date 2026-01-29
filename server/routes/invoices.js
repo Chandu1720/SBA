@@ -11,14 +11,21 @@ const auth = require('../middleware/auth');
 const authorize = require('../middleware/authorize');
 const { generateNumber } = require('../utils/numberGenerator');
 
+const uploadDir = path.join(__dirname, '..', 'uploads', 'invoices');
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
 /* ------------------------------------------------------------------
    MULTER CONFIG
 ------------------------------------------------------------------- */
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/invoices');
-  },
+destination: (req, file, cb) => {
+  cb(null, uploadDir);
+},
+
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
     const base = path.basename(file.originalname, ext);
@@ -145,13 +152,8 @@ router.post(
         paidAmount: req.body.paidAmount ? Number(req.body.paidAmount) : 0,
         paymentMode: req.body.paymentMode || '',
         notes: req.body.notes || '',
-        invoiceCopy: req.files?.invoiceCopy?.[0]
-          ? `/uploads/invoices/${req.files.invoiceCopy[0].filename}`
-          : '',
-        paymentProof: req.files?.paymentProof?.[0]
-          ? `/uploads/invoices/${req.files.paymentProof[0].filename}`
-          : '',
-      };
+        invoiceCopy: req.files?.invoiceCopy?.[0]?.filename || '',
+     paymentProof: req.files?.paymentProof?.[0]?.filename || '',
 
       
 
@@ -259,7 +261,8 @@ router.get(
         return res.status(404).json({ message: 'Invoice file not found' });
       }
 
-      const filePath = path.join(__dirname, '..', invoice.invoiceCopy);
+      const filePath = path.join(uploadDir, invoice.invoiceCopy);
+
       
       // Check if file exists
       if (!fs.existsSync(filePath)) {
