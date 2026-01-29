@@ -1,5 +1,4 @@
-# BMS (Business Management System) - AI Coding Agent Guide
-
+# BMS (Business Management System)
 ## Project Overview
 A full-stack business management system with **React TypeScript frontend** and **Express.js + MongoDB backend**. Two separate applications: `bms-frontend-ts/` and `server/` that communicate via REST API.
 
