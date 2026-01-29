@@ -1,10 +1,11 @@
 const mongoose = require('mongoose');
 
 const invoiceSchema = new mongoose.Schema({
-  invoiceId: {
+  invoiceNumber: {
     type: String,
     unique: true,
   },
+  supplierInvoiceNumber: String, // Actual invoice number from supplier
   supplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' },
   invoiceDate: Date,
   dueDate: Date,
@@ -13,23 +14,10 @@ const invoiceSchema = new mongoose.Schema({
   paidAmount: { type: Number, default: 0 },
   paymentMode: String,
   notes: String,
-  invoiceCopy: String,
-});
-
-invoiceSchema.pre('save', async function (next) {
-  if (this.isNew) {
-    const date = new Date();
-    const year = date.getFullYear().toString().slice(-2);
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const dateStr = `${month}${year}`;
-
-    const count = await mongoose.models.Invoice.countDocuments({
-      invoiceId: { $regex: `^INV${dateStr}` },
-    });
-
-    this.invoiceId = `INV${dateStr}-${count + 1}`;
-  }
-  next();
+  invoiceCopy: String, // Path to uploaded invoice file
+  paymentProof: String, // Path to uploaded cheque/UPI proof file
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
 });
 
 const Invoice = mongoose.model('Invoice', invoiceSchema);

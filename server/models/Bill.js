@@ -1,44 +1,93 @@
 const mongoose = require('mongoose');
 
+// const lineItemSchema = new mongoose.Schema({
+//   itemType: {
+//     type: String,
+//     required: true,
+//     enum: ['Simple', 'Product', 'Kit']
+//   },
+//   // For 'Simple' items, the name is stored directly.
+//   name: {
+//     type: String,
+//     // Not required if it's a Product or Kit, as the name will be populated.
+//     required: function() { return this.itemType === 'Simple'; }
+//   },
+//   // For 'Product' and 'Kit' items, we store a reference.
+//   itemId: {
+//     type: mongoose.Schema.Types.ObjectId,
+//     refPath: 'itemModel',
+//     required: function() { return this.itemType !== 'Simple'; }
+//   },
+//   itemModel: {
+//     type: String,
+//     enum: ['Product', 'Kit'],
+//     required: function() { return this.itemType !== 'Simple'; }
+//   },
+//   quantity: {
+//     type: Number,
+//     required: true,
+//     min: 0
+//   },
+//   rate: {
+//     type: Number,
+//     required: true,
+//     min: 0
+//   },
+//   total: {
+//     type: Number,
+//     required: true,
+//     min: 0
+//   }
+// }, { _id: false });
+const lineItemSchema = new mongoose.Schema({
+  itemType: { type: String, required: true, enum: ['Simple', 'Product', 'Kit'] },
+  name: { type: String, required: function() { return this.itemType === 'Simple'; } },
+  itemId: { type: mongoose.Schema.Types.ObjectId, refPath: 'items.itemModel' },
+  itemModel: { type: String, enum: ['Product', 'Kit'] },
+  quantity: { type: Number, required: true },
+  rate: { type: Number, required: true },
+  taxRate: { type: Number, default: 0 }, 
+  total: { type: Number, required: true ,min:0 }
+}, { _id: false });
+
 const billSchema = new mongoose.Schema({
-  billId: {
+  billNumber: {
     type: String,
     unique: true,
   },
   customerName: String,
   customerPhone: String,
-  billDate: Date,
-  items: [{
-    name: String,
-    quantity: Number,
-    rate: Number,
-    total: Number,
-  }],
-  grandTotal: Number,
-  paymentStatus: String,
-  paidAmount: { type: Number, default: 0 },
+  billDate: {
+    type: Date,
+    default: Date.now
+  },
+  items: [lineItemSchema],
+  grandTotal: {
+    type: Number,
+    required: true
+  },
+  paymentStatus: {
+    type: String,
+    default: 'Pending'
+  },
+  paidAmount: {
+    type: Number,
+    default: 0
+  },
   paymentMode: String,
   notes: String,
-  billCopy: String,
-}, { timestamps: true });
-
-// Pre-save hook to generate the custom bill ID
-billSchema.pre('save', async function (next) {
-  if (this.isNew) {
-    const namePrefix = this.customerName.substring(0, 4).toUpperCase();
-    const date = new Date();
-    const year = date.getFullYear().toString().slice(-2);
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const dateStr = `${month}${year}`;
-
-    const count = await mongoose.models.Bill.countDocuments({
-      billId: { $regex: `^${namePrefix}${dateStr}` },
-    });
-
-    this.billId = `${namePrefix}${dateStr}-${count + 1}`;
+  billCopy: String, // Path to an uploaded copy of the bill
+  shop: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ShopProfile',
+    required: true
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   }
-  next();
-});
+}, { timestamps: true });
 
 const Bill = mongoose.model('Bill', billSchema);
 

@@ -1,33 +1,133 @@
-# Getting Started with Create React App
+# BMS (Business Management System)
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A comprehensive business management system built with React TypeScript frontend and Express.js backend.
 
-## Available Scripts
+## Project Structure
 
-In the project directory, you can run:
+```
+BMS/
+├── bms-frontend-ts/     # React TypeScript frontend
+├── server/             # Express.js backend with MongoDB
+├── start.sh            # Quick start script
+└── *.md                # Documentation files
+```
 
-### `npm start`
+## Features
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **User Management**: Authentication, authorization, and role-based access control
+- **Invoice Management**: Create, view, edit invoices with file upload support
+- **Supplier Management**: Manage suppliers and their information
+- **Product Management**: Track products and inventory
+- **Bills Management**: Handle billing operations
+- **File Management**: Upload, view, and download invoice files
+- **Responsive Design**: Mobile-friendly interface
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Quick Start
 
-### `npm test`
+### Prerequisites
+- Node.js (v14 or higher)
+- MongoDB (local or cloud instance)
+- npm or yarn
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Installation & Run
 
-### `npm run build`
+1. **Clone and setup:**
+   ```bash
+   git clone <repository-url>
+   cd BMS
+   ```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+2. **Quick start (recommended):**
+   ```bash
+   chmod +x start.sh
+   ./start.sh
+   ```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+3. **Manual setup:**
+   ```bash
+   # Install backend dependencies
+   cd server
+   npm install
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+   # Install frontend dependencies
+   cd ../bms-frontend-ts
+   npm install
+
+   # Build frontend
+   npm run build
+
+   # Start backend
+   cd ../server
+   npm start
+   ```
+
+4. **Access the application:**
+   - Frontend: http://localhost:3001
+   - Backend API: http://localhost:5002
+
+## Development
+
+### Frontend Development
+```bash
+cd bms-frontend-ts
+npm start  # Runs on http://localhost:3001
+```
+
+### Backend Development
+```bash
+cd server
+npm run dev  # If you have nodemon configured
+# or
+npm start
+```
+
+## Environment Variables
+
+Create `.env` file in the `server/` directory:
+
+```env
+PORT=5002
+MONGO_URI=mongodb://localhost:27017/bms
+JWT_SECRET=your-secret-key
+```
+
+## API Documentation
+
+The backend provides RESTful APIs for:
+- Authentication (`/api/auth`)
+- Users (`/api/users`)
+- Invoices (`/api/invoices`)
+- Suppliers (`/api/suppliers`)
+- Products (`/api/products`)
+- Bills (`/api/bills`)
+
+## Technologies Used
+
+### Frontend
+- React 18 with TypeScript
+- Tailwind CSS for styling
+- Axios for API calls
+- React Router for navigation
+- Lucide React for icons
+
+### Backend
+- Node.js with Express.js
+- MongoDB with Mongoose
+- JWT for authentication
+- Multer for file uploads
+- bcrypt for password hashing
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+This project is private and proprietary.
 
 ### `npm run eject`
 

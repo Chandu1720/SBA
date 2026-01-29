@@ -2,12 +2,13 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const authorize = require('../middleware/authorize');
 const bcrypt = require('bcryptjs'); // Required for manual password hashing if needed, but User model handles it
 
 // @route   GET api/users
 // @desc    Get all users
-// @access  Private (requires authentication)
-router.get('/', auth, async (req, res) => {
+// @access  Private (Admin only)
+router.get('/', [auth, authorize(['users:view'])], async (req, res) => {
   try {
     const users = await User.find().select('-password');
     res.json(users);
@@ -17,10 +18,27 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+// @route   GET api/users/me
+// @desc    Get current user's profile
+// @access  Private
+router.get('/me', auth, async (req, res) => {
+  try {
+    // req.user.id is from the auth middleware
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json(user);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
 // @route   GET api/users/:id
 // @desc    Get user by ID
-// @access  Private (requires authentication)
-router.get('/:id', auth, async (req, res) => {
+// @access  Private (Admin only)
+router.get('/:id', [auth, authorize(['users:view'])], async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
     if (!user) {
@@ -39,9 +57,9 @@ router.get('/:id', auth, async (req, res) => {
 
 // @route   POST api/users
 // @desc    Add a new user
-// @access  Private (requires authentication, e.g., for admin to add users)
-router.post('/', auth, async (req, res) => {
-  const { name, email, password } = req.body;
+// @access  Private (Admin only)
+router.post('/', [auth, authorize(['users:create'])], async (req, res) => {
+  const { name, email, password, role } = req.body;
 
   try {
     let user = await User.findOne({ email });
@@ -49,7 +67,7 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    user = new User({ name, email, password });
+    user = new User({ name, email, password, role });
 
     // Password hashing is handled by the pre-save hook in the User model
     await user.save();
@@ -65,14 +83,15 @@ router.post('/', auth, async (req, res) => {
 
 // @route   PUT api/users/:id
 // @desc    Update user by ID
-// @access  Private (requires authentication)
-router.put('/:id', auth, async (req, res) => {
-  const { name, email, password } = req.body;
+// @access  Private (Admin only)
+router.put('/:id', [auth, authorize(['users:edit'])], async (req, res) => {
+  const { name, email, password, role } = req.body;
 
   // Build user object
   const userFields = {};
   if (name) userFields.name = name;
   if (email) userFields.email = email;
+  if (role) userFields.role = role;
   if (password) {
     // Hash new password if provided
     const salt = await bcrypt.genSalt(10);
@@ -110,8 +129,8 @@ router.put('/:id', auth, async (req, res) => {
 
 // @route   DELETE api/users/:id
 // @desc    Delete user by ID
-// @access  Private (requires authentication)
-router.delete('/:id', auth, async (req, res) => {
+// @access  Private (Admin only)
+router.delete('/:id', [auth, authorize(['users:delete'])], async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
 

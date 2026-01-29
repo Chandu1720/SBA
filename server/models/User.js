@@ -17,6 +17,20 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  role: {
+    type: String,
+    enum: ['User', 'Admin'],
+    default: 'User',
+  },
+  permissions: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Permission',
+  }],
+  shop: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ShopProfile',
+    required: true
+  }
 });
 
 // Hash password before saving
@@ -35,8 +49,14 @@ userSchema.methods.comparePassword = async function (password) {
 };
 
 // Method to generate JWT
-userSchema.methods.generateAuthToken = function () {
-  return jwt.sign({ id: this._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+userSchema.methods.generateAuthToken = async function () {
+  await this.populate('permissions');
+  return jwt.sign({ id: this._id, name: this.name, role: this.role, permissions: this.permissions.map(p => p.name), shop: this.shop }, process.env.JWT_SECRET, { expiresIn: '7d' });
+};
+
+// Method to generate Refresh Token
+userSchema.methods.generateRefreshToken = async function () {
+  return jwt.sign({ id: this._id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
 };
 
 const User = mongoose.model('User', userSchema);
