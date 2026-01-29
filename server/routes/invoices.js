@@ -1,5 +1,3 @@
-Error: ENOENT: no such file or directory, open 'uploads/invoices/1769702576656-WhatsApp Image 2026-01-27 at 6.27.46 PM.jpeg' getting this on hosted i will give the route 
-
 const express = require('express');
 const router = express.Router();
 const Joi = require('joi');
