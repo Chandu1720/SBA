@@ -17,7 +17,7 @@ services:
     plan: free
     rootDir: bms-frontend-ts
     buildCommand: npm install && npm run build
-    publishPath: build
+    publishDirectory: build
     routes:
       - type: rewrite
         source: /*
