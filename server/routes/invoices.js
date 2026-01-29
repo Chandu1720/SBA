@@ -1,3 +1,5 @@
+Error: ENOENT: no such file or directory, open 'uploads/invoices/1769702576656-WhatsApp Image 2026-01-27 at 6.27.46 PM.jpeg' getting this on hosted i will give the route 
+
 const express = require('express');
 const router = express.Router();
 const Joi = require('joi');
@@ -11,21 +13,14 @@ const auth = require('../middleware/auth');
 const authorize = require('../middleware/authorize');
 const { generateNumber } = require('../utils/numberGenerator');
 
-const uploadDir = path.join(__dirname, '..', 'uploads', 'invoices');
-
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
 /* ------------------------------------------------------------------
    MULTER CONFIG
 ------------------------------------------------------------------- */
 
 const storage = multer.diskStorage({
-destination: (req, file, cb) => {
-  cb(null, uploadDir);
-},
-
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/invoices');
+  },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
     const base = path.basename(file.originalname, ext);
@@ -152,8 +147,13 @@ router.post(
         paidAmount: req.body.paidAmount ? Number(req.body.paidAmount) : 0,
         paymentMode: req.body.paymentMode || '',
         notes: req.body.notes || '',
-        invoiceCopy: req.files?.invoiceCopy?.[0]?.filename || '',
-     paymentProof: req.files?.paymentProof?.[0]?.filename || '',
+        invoiceCopy: req.files?.invoiceCopy?.[0]
+          ? `/uploads/invoices/${req.files.invoiceCopy[0].filename}`
+          : '',
+        paymentProof: req.files?.paymentProof?.[0]
+          ? `/uploads/invoices/${req.files.paymentProof[0].filename}`
+          : '',
+      };
 
       
 
@@ -261,8 +261,7 @@ router.get(
         return res.status(404).json({ message: 'Invoice file not found' });
       }
 
-      const filePath = path.join(uploadDir, invoice.invoiceCopy);
-
+      const filePath = path.join(__dirname, '..', invoice.invoiceCopy);
       
       // Check if file exists
       if (!fs.existsSync(filePath)) {
