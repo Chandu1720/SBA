@@ -1,0 +1,31 @@
+{
+    "version": 2,
+    "builds": [
+        {
+            "src": "server/server.js",
+            "use": "@vercel/node"
+        },
+        {
+            "src": "bms-frontend-ts/package.json",
+            "use": "@vercel/static-build",
+            "config": {
+                "workPath": "bms-frontend-ts",
+                "distDir": "build"
+            }
+        }
+    ],
+    "routes": [
+        {
+            "src": "/api/(.*)",
+            "dest": "server/server.js"
+        },
+        {
+            "src": "/static/(.*)",
+            "dest": "bms-frontend-ts/build/static/$1"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "bms-frontend-ts/build/index.html"
+        }
+    ]
+}
