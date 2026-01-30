@@ -26,6 +26,7 @@
     "mongoose": "^8.5.1",
     "multer": "^2.0.2",
     "node-cron": "^4.2.1",
-    "pdfkit": "^0.13.0"
+    "pdfkit": "^0.13.0",
+    "cloudinary": "^2.2.0"
   }
 }

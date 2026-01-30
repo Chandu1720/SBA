@@ -1,9 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Joi = require('joi');
-const path = require('path');
-const fs = require('fs');
 const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
 
 const Invoice = require('../models/Invoice');
 const Supplier = require('../models/Supplier');
@@ -11,49 +10,44 @@ const auth = require('../middleware/auth');
 const authorize = require('../middleware/authorize');
 const { generateNumber } = require('../utils/numberGenerator');
 
-/* ------------------------------------------------------------------
-   MULTER CONFIG
-------------------------------------------------------------------- */
-
-const uploadBaseDir = process.env.STORAGE_PATH || path.join(__dirname, '..', 'uploads');
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = path.join(uploadBaseDir, 'invoices');
-    // Ensure the directory exists
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const base = path.basename(file.originalname, ext);
-    cb(null, `${Date.now()}-${base}${ext}`);
-  },
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
+// Use memory storage for multer
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
     const allowed = /pdf|jpg|jpeg|png/;
-    const isValid =
-      allowed.test(path.extname(file.originalname).toLowerCase()) &&
-      allowed.test(file.mimetype);
-
+    const isValid = allowed.test(file.mimetype);
     cb(isValid ? null : new Error('Invalid file type'), isValid);
   },
 });
 
-// Multer fields config for multiple files
+// Multer fields config
 const uploadFields = upload.fields([
   { name: 'invoiceCopy', maxCount: 1 },
   { name: 'paymentProof', maxCount: 1 },
 ]);
 
-/* ------------------------------------------------------------------
-   JOI SCHEMAS
-------------------------------------------------------------------- */
+// Helper to upload file buffer to Cloudinary
+const handleUpload = (fileBuffer, originalFilename) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder: 'bms_invoices', resource_type: 'auto', public_id: originalFilename },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    );
+    uploadStream.end(fileBuffer);
+  });
+};
 
 const joiInvoiceCreateSchema = Joi.object({
   invoiceNumber: Joi.string(),
@@ -82,11 +76,6 @@ const joiInvoiceUpdateSchema = Joi.object({
   notes: Joi.string().allow('', null),
   invoiceCopy: Joi.string().allow('', null),
 }).unknown(true);
-
-
-/* ------------------------------------------------------------------
-   GET ALL INVOICES
-------------------------------------------------------------------- */
 
 router.get('/', [auth, authorize(['invoices:view'])], async (req, res) => {
   const { page = 1, limit = 10, search = '' } = req.query;
@@ -129,9 +118,6 @@ router.get('/', [auth, authorize(['invoices:view'])], async (req, res) => {
   }
 });
 
-/* ------------------------------------------------------------------
-   CREATE INVOICE (WITH FILE UPLOAD)
-------------------------------------------------------------------- */
 
 router.post(
   '/',
@@ -140,31 +126,35 @@ router.post(
     try {
       const invoiceNumber = await generateNumber('invoice');
       
-      // Convert FormData strings to correct types
       const data = {
         invoiceNumber,
-        supplierInvoiceNumber: req.body.supplierInvoiceNumber || '',
         supplierId: req.body.supplierId,
         invoiceDate: new Date(req.body.invoiceDate),
         dueDate: new Date(req.body.dueDate),
         amount: Number(req.body.amount),
         paymentStatus: req.body.paymentStatus,
+        supplierInvoiceNumber: req.body.supplierInvoiceNumber || '',
         paidAmount: req.body.paidAmount ? Number(req.body.paidAmount) : 0,
         paymentMode: req.body.paymentMode || '',
         notes: req.body.notes || '',
-        invoiceCopy: req.files?.invoiceCopy?.[0]
-          ? `uploads/invoices/${req.files.invoiceCopy[0].filename}`
-          : '',
-        paymentProof: req.files?.paymentProof?.[0]
-          ? `uploads/invoices/${req.files.paymentProof[0].filename}`
-          : '',
+        invoiceCopy: '',
+        paymentProof: '',
       };
 
-      
+      // Handle file uploads
+      if (req.files) {
+        if (req.files.invoiceCopy) {
+          const result = await handleUpload(req.files.invoiceCopy[0].buffer, req.files.invoiceCopy[0].originalname);
+          data.invoiceCopy = result.secure_url;
+        }
+        if (req.files.paymentProof) {
+          const result = await handleUpload(req.files.paymentProof[0].buffer, req.files.paymentProof[0].originalname);
+          data.paymentProof = result.secure_url;
+        }
+      }
 
       const { error, value } = joiInvoiceCreateSchema.validate(data);
       if (error) {
-        
         return res.status(400).json({ 
           message: error.details[0].message,
           details: error.details 
@@ -177,15 +167,11 @@ router.post(
 
       res.status(201).json(populated);
     } catch (err) {
-      
+      console.error("Error creating invoice:", err);
       res.status(400).json({ message: err.message });
     }
   }
 );
-
-/* ------------------------------------------------------------------
-   GET INVOICE BY ID
-------------------------------------------------------------------- */
 
 router.get('/:id', [auth, authorize(['invoices:view'])], async (req, res) => {
   try {
@@ -195,40 +181,37 @@ router.get('/:id', [auth, authorize(['invoices:view'])], async (req, res) => {
     }
     res.json(invoice);
   } catch (err) {
-    
     res.status(500).json({ message: err.message });
   }
 });
 
-/* ------------------------------------------------------------------
-   UPDATE INVOICE (WITH FILE UPLOAD)
-------------------------------------------------------------------- */
 
 router.put(
   '/:id',
   [auth, authorize(['invoices:edit']), uploadFields],
   async (req, res) => {
     try {
-      // 🔑 Convert FormData strings → correct types
-      const data = {
-        ...req.body,
-        amount: req.body.amount ? Number(req.body.amount) : undefined,
-        paidAmount: req.body.paidAmount ? Number(req.body.paidAmount) : undefined,
-        invoiceDate: req.body.invoiceDate ? new Date(req.body.invoiceDate) : undefined,
-        dueDate: req.body.dueDate ? new Date(req.body.dueDate) : undefined,
-      };
+      const data = { ...req.body };
 
-      // 🔑 If files uploaded, save paths
-      if (req.files?.invoiceCopy?.[0]) {
-        data.invoiceCopy = `uploads/invoices/${req.files.invoiceCopy[0].filename}`;
+      // Handle file uploads
+      if (req.files) {
+        if (req.files.invoiceCopy) {
+          const result = await handleUpload(req.files.invoiceCopy[0].buffer, req.files.invoiceCopy[0].originalname);
+          data.invoiceCopy = result.secure_url;
+        }
+        if (req.files.paymentProof) {
+          const result = await handleUpload(req.files.paymentProof[0].buffer, req.files.paymentProof[0].originalname);
+          data.paymentProof = result.secure_url;
+        }
       }
       
-      if (req.files?.paymentProof?.[0]) {
-        data.paymentProof = `uploads/invoices/${req.files.paymentProof[0].filename}`;
-      }
+      // Type conversions
+      if(data.amount) data.amount = Number(data.amount);
+      if(data.paidAmount) data.paidAmount = Number(data.paidAmount);
+      if(data.invoiceDate) data.invoiceDate = new Date(data.invoiceDate);
+      if(data.dueDate) data.dueDate = new Date(data.dueDate);
 
-      // 🔑 Validate AFTER conversion
-const { error } = joiInvoiceUpdateSchema.validate(data);
+      const { error } = joiInvoiceUpdateSchema.validate(data);
       if (error) {
         return res.status(400).json({ message: error.details[0].message });
       }
@@ -245,91 +228,27 @@ const { error } = joiInvoiceUpdateSchema.validate(data);
 
       res.json(updatedInvoice);
     } catch (err) {
-      
+      console.error("Error updating invoice:", err);
       res.status(500).json({ message: err.message });
     }
   }
 );
 
-/* ------------------------------------------------------------------
-   DOWNLOAD INVOICE FILE
-------------------------------------------------------------------- */
-
-router.get(
-  '/:id/download',
-  [auth, authorize(['invoices:view'])],
-  async (req, res) => {
+const redirectToCloudinaryUrl = async (req, res) => {
     try {
       const invoice = await Invoice.findById(req.params.id);
-      
       if (!invoice || !invoice.invoiceCopy) {
         return res.status(404).json({ message: 'Invoice file not found' });
       }
-
-      const filePath = path.join(uploadBaseDir, path.basename(invoice.invoiceCopy));
-      
-      // Check if file exists
-      if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ message: 'File not found on server' });
-      }
-
-      // Send file for download
-      res.download(filePath, `Invoice-${invoice.invoiceNumber}.pdf`, (err) => {
-        if (err) {
-          
-        }
-      });
-    } catch (err)      
-      res.status(500).json({ message: err.message });
-    }
-  }
-);
-
-/* ------------------------------------------------------------------
-   VIEW INVOICE FILE
-------------------------------------------------------------------- */
-
-router.get(
-  '/:id/file',
-  [auth, authorize(['invoices:view'])],
-  async (req, res) => {
-    try {
-      const invoice = await Invoice.findById(req.params.id);
-      
-      if (!invoice || !invoice.invoiceCopy) {
-        return res.status(404).json({ message: 'Invoice file not found' });
-      }
-
-      const filePath = path.join(uploadBaseDir, 'invoices', path.basename(invoice.invoiceCopy));
-      
-      // Check if file exists
-      if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ message: 'File not found on server' });
-      }
-
-      // Set proper headers for viewing
-      const ext = path.extname(invoice.invoiceCopy).toLowerCase();
-      let contentType = 'application/octet-stream';
-      
-      if (ext === '.pdf') contentType = 'application/pdf';
-      else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
-      else if (ext === '.png') contentType = 'image/png';
-
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Content-Disposition', 'inline');
-      
-      // Stream the file
-      fs.createReadStream(filePath).pipe(res);
+      // Redirect to the Cloudinary URL
+      res.redirect(302, invoice.invoiceCopy);
     } catch (err) {
-      
       res.status(500).json({ message: err.message });
     }
-  }
-);
+}
 
-/* ------------------------------------------------------------------
-   CLEAR INVOICE DUE
-------------------------------------------------------------------- */
+router.get('/:id/download', [auth, authorize(['invoices:view'])], redirectToCloudinaryUrl);
+router.get('/:id/file', [auth, authorize(['invoices:view'])], redirectToCloudinaryUrl);
 
 router.put(
   '/:id/clear-due',
@@ -351,10 +270,6 @@ router.put(
     }
   }
 );
-
-/* ------------------------------------------------------------------
-   DELETE INVOICE
-------------------------------------------------------------------- */
 
 router.delete(
   '/:id',

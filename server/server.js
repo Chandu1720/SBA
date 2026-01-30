@@ -32,8 +32,6 @@ app.use(cors({
 
 app.use(express.json());
 app.use(cookieParser());
-const uploadDir = process.env.STORAGE_PATH || path.join(__dirname, 'uploads');
-app.use('/uploads', express.static(uploadDir));
 
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/bms";

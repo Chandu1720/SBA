@@ -1,26 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs'); // For file system operations
+const cloudinary = require('cloudinary').v2;
 const ShopProfile = require('../models/ShopProfile');
 const auth = require('../middleware/auth');
 const authorize = require('../middleware/authorize');
 
-const uploadBaseDir = process.env.STORAGE_PATH || path.join(__dirname, '..', 'uploads');
-
-// Set up multer for file uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadPath = path.join(uploadBaseDir, 'shop');
-    // Ensure the uploads directory exists
-    fs.mkdirSync(uploadPath, { recursive: true });
-    cb(null, uploadPath);
-  },
-  filename: function (req, file, cb) {
-    cb(null, 'shop-logo' + '-' + Date.now() + path.extname(file.originalname));
-  }
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
+// Use memory storage for multer to handle file as a buffer
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage: storage,
@@ -28,23 +22,31 @@ const upload = multer({
   fileFilter: function (req, file, cb) {
     checkFileType(file, cb);
   }
-}).single('logo'); // 'logo' is the field name for the file input
+}).single('logo');
 
-// Check file type
 function checkFileType(file, cb) {
-  // Allowed ext
   const filetypes = /jpeg|jpg|png|gif/;
-  // Check ext
-  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-  // Check mime
   const mimetype = filetypes.test(file.mimetype);
-
-  if (mimetype && extname) {
+  if (mimetype) {
     return cb(null, true);
   } else {
     cb('Error: Images Only!');
   }
 }
+
+// Helper to upload file buffer to Cloudinary
+const handleUpload = (fileBuffer) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder: 'bms_shop_logos' },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    );
+    uploadStream.end(fileBuffer);
+  });
+};
 
 // @route   GET /api/shop-profile
 // @desc    Get shop profile
@@ -53,9 +55,16 @@ router.get('/', [auth, authorize(['shop-profile:view'])], async (req, res) => {
   try {
     const shopProfile = await ShopProfile.findOne();
     if (!shopProfile) {
-      return res.status(404).json({ message: 'Shop profile not found' });
+      // Return a default or empty profile if none exists
+      return res.json({
+        shop_name: '',
+        gstin: '',
+        address: '',
+        phone_number: '',
+        logo_url: '',
+      });
     }
-    res.json(.shopProfile);
+    res.json(shopProfile);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
@@ -75,22 +84,34 @@ router.post('/', [auth, authorize(['shop-profile:edit'])], (req, res) => {
       const { shop_name, gstin, address, phone_number } = req.body;
       let shopProfile = await ShopProfile.findOne();
 
+      let logoUrl = shopProfile ? shopProfile.logo_url : '';
+
+      // Handle file upload to Cloudinary
+      if (req.file) {
+        const uploadResult = await handleUpload(req.file.buffer);
+        logoUrl = uploadResult.secure_url;
+
+        // If updating and there was an old logo, delete it from Cloudinary
+        if (shopProfile && shopProfile.logo_url) {
+          try {
+            const publicId = shopProfile.logo_url.split('/').pop().split('.')[0];
+            const folder = shopProfile.logo_url.split('/').slice(-2, -1)[0];
+            if (folder === 'bms_shop_logos') {
+               await cloudinary.uploader.destroy(`${folder}/${publicId}`);
+            }
+          } catch(e) {
+            console.error("Error deleting old logo from Cloudinary:", e);
+          }
+        }
+      }
+
       if (shopProfile) {
         // Update existing profile
         shopProfile.shop_name = shop_name || shopProfile.shop_name;
         shopProfile.gstin = gstin || shopProfile.gstin;
         shopProfile.address = address || shopProfile.address;
         shopProfile.phone_number = phone_number || shopProfile.phone_number;
-        if (req.file) {
-          // If a new logo is uploaded, delete the old one if it exists
-          if (shopProfile.logo_url) {
-            const oldLogoPath = path.join(uploadBaseDir, 'shop', path.basename(shopProfile.logo_url));
-            if (fs.existsSync(oldLogoPath)) {
-              fs.unlinkSync(oldLogoPath);
-            }
-          }
-          shopProfile.logo_url = `uploads/shop/${req.file.filename}`;
-        }
+        shopProfile.logo_url = logoUrl;
         await shopProfile.save();
         res.json(shopProfile);
       } else {
@@ -103,17 +124,13 @@ router.post('/', [auth, authorize(['shop-profile:edit'])], (req, res) => {
           gstin,
           address,
           phone_number,
-          logo_url: req.file ? `uploads/shop/${req.file.filename}` : '',
+          logo_url: logoUrl,
         });
         await shopProfile.save();
         res.status(201).json(shopProfile);
       }
     } catch (err) {
       console.error(err.message);
-      // If there's an error after file upload, delete the uploaded file
-      if (req.file) {
-        fs.unlinkSync(req.file.path);
-      }
       res.status(500).send('Server Error');
     }
   });
