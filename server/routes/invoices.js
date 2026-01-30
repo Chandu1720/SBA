@@ -15,7 +15,7 @@ const { generateNumber } = require('../utils/numberGenerator');
    MULTER CONFIG
 ------------------------------------------------------------------- */
 
-const uploadBaseDir = process.env.RENDER_DISK_MOUNT_PATH || path.join(__dirname, '..', 'uploads');
+const uploadBaseDir = process.env.STORAGE_PATH || path.join(__dirname, '..', 'uploads');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

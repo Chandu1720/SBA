@@ -7,7 +7,7 @@ const ShopProfile = require('../models/ShopProfile');
 const auth = require('../middleware/auth');
 const authorize = require('../middleware/authorize');
 
-const uploadBaseDir = process.env.RENDER_DISK_MOUNT_PATH || path.join(__dirname, '..', 'uploads');
+const uploadBaseDir = process.env.STORAGE_PATH || path.join(__dirname, '..', 'uploads');
 
 // Set up multer for file uploads
 const storage = multer.diskStorage({

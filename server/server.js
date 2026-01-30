@@ -32,7 +32,7 @@ app.use(cors({
 
 app.use(express.json());
 app.use(cookieParser());
-const uploadDir = process.env.RENDER_DISK_MOUNT_PATH || path.join(__dirname, 'uploads');
+const uploadDir = process.env.STORAGE_PATH || path.join(__dirname, 'uploads');
 app.use('/uploads', express.static(uploadDir));
 
 const PORT = process.env.PORT || 5000;
