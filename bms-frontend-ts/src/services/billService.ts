@@ -25,7 +25,22 @@ export const updateBill = async (id: string, billData: Partial<Bill>) => {
   return response.data;
 };
 
+
+
 export const deleteBill = async (id: string) => {
+
   const response = await api.delete(`/bills/${id}`);
+
   return response.data;
+
+};
+
+
+
+export const clearBillDue = async (id: string) => {
+
+  const response = await api.put(`/bills/${id}/clear-due`);
+
+  return response.data;
+
 };

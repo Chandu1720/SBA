@@ -7,10 +7,12 @@ const ShopProfile = require('../models/ShopProfile');
 const auth = require('../middleware/auth');
 const authorize = require('../middleware/authorize');
 
+const uploadBaseDir = process.env.RENDER_DISK_MOUNT_PATH || path.join(__dirname, '..', 'uploads');
+
 // Set up multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadPath = path.join(__dirname, '../uploads');
+    const uploadPath = path.join(uploadBaseDir, 'shop');
     // Ensure the uploads directory exists
     fs.mkdirSync(uploadPath, { recursive: true });
     cb(null, uploadPath);
@@ -53,7 +55,7 @@ router.get('/', [auth, authorize(['shop-profile:view'])], async (req, res) => {
     if (!shopProfile) {
       return res.status(404).json({ message: 'Shop profile not found' });
     }
-    res.json(shopProfile);
+    res.json(.shopProfile);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
@@ -82,12 +84,12 @@ router.post('/', [auth, authorize(['shop-profile:edit'])], (req, res) => {
         if (req.file) {
           // If a new logo is uploaded, delete the old one if it exists
           if (shopProfile.logo_url) {
-            const oldLogoPath = path.join(__dirname, '..', shopProfile.logo_url);
+            const oldLogoPath = path.join(uploadBaseDir, 'shop', path.basename(shopProfile.logo_url));
             if (fs.existsSync(oldLogoPath)) {
               fs.unlinkSync(oldLogoPath);
             }
           }
-          shopProfile.logo_url = `/uploads/${req.file.filename}`;
+          shopProfile.logo_url = `uploads/shop/${req.file.filename}`;
         }
         await shopProfile.save();
         res.json(shopProfile);
@@ -101,7 +103,7 @@ router.post('/', [auth, authorize(['shop-profile:edit'])], (req, res) => {
           gstin,
           address,
           phone_number,
-          logo_url: req.file ? `/uploads/${req.file.filename}` : '',
+          logo_url: req.file ? `uploads/shop/${req.file.filename}` : '',
         });
         await shopProfile.save();
         res.status(201).json(shopProfile);

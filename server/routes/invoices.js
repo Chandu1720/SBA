@@ -15,9 +15,16 @@ const { generateNumber } = require('../utils/numberGenerator');
    MULTER CONFIG
 ------------------------------------------------------------------- */
 
+const uploadBaseDir = process.env.RENDER_DISK_MOUNT_PATH || path.join(__dirname, '..', 'uploads');
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/invoices');
+    const uploadPath = path.join(uploadBaseDir, 'invoices');
+    // Ensure the directory exists
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
@@ -146,10 +153,10 @@ router.post(
         paymentMode: req.body.paymentMode || '',
         notes: req.body.notes || '',
         invoiceCopy: req.files?.invoiceCopy?.[0]
-          ? `/uploads/invoices/${req.files.invoiceCopy[0].filename}`
+          ? `uploads/invoices/${req.files.invoiceCopy[0].filename}`
           : '',
         paymentProof: req.files?.paymentProof?.[0]
-          ? `/uploads/invoices/${req.files.paymentProof[0].filename}`
+          ? `uploads/invoices/${req.files.paymentProof[0].filename}`
           : '',
       };
 
@@ -213,11 +220,11 @@ router.put(
 
       // 🔑 If files uploaded, save paths
       if (req.files?.invoiceCopy?.[0]) {
-        data.invoiceCopy = `/uploads/invoices/${req.files.invoiceCopy[0].filename}`;
+        data.invoiceCopy = `uploads/invoices/${req.files.invoiceCopy[0].filename}`;
       }
       
       if (req.files?.paymentProof?.[0]) {
-        data.paymentProof = `/uploads/invoices/${req.files.paymentProof[0].filename}`;
+        data.paymentProof = `uploads/invoices/${req.files.paymentProof[0].filename}`;
       }
 
       // 🔑 Validate AFTER conversion
@@ -259,7 +266,7 @@ router.get(
         return res.status(404).json({ message: 'Invoice file not found' });
       }
 
-      const filePath = path.join(__dirname, '..', invoice.invoiceCopy);
+      const filePath = path.join(uploadBaseDir, path.basename(invoice.invoiceCopy));
       
       // Check if file exists
       if (!fs.existsSync(filePath)) {
@@ -272,8 +279,7 @@ router.get(
           
         }
       });
-    } catch (err) {
-      
+    } catch (err)      
       res.status(500).json({ message: err.message });
     }
   }
@@ -294,7 +300,7 @@ router.get(
         return res.status(404).json({ message: 'Invoice file not found' });
       }
 
-      const filePath = path.join(__dirname, '..', invoice.invoiceCopy);
+      const filePath = path.join(uploadBaseDir, 'invoices', path.basename(invoice.invoiceCopy));
       
       // Check if file exists
       if (!fs.existsSync(filePath)) {
@@ -316,6 +322,31 @@ router.get(
       fs.createReadStream(filePath).pipe(res);
     } catch (err) {
       
+      res.status(500).json({ message: err.message });
+    }
+  }
+);
+
+/* ------------------------------------------------------------------
+   CLEAR INVOICE DUE
+------------------------------------------------------------------- */
+
+router.put(
+  '/:id/clear-due',
+  [auth, authorize(['invoices:edit'])],
+  async (req, res) => {
+    try {
+      const invoice = await Invoice.findById(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ message: 'Invoice not found' });
+      }
+
+      invoice.paidAmount = invoice.amount;
+      invoice.paymentStatus = 'Paid';
+
+      const updatedInvoice = await invoice.save();
+      res.json(updatedInvoice);
+    } catch (err) {
       res.status(500).json({ message: err.message });
     }
   }

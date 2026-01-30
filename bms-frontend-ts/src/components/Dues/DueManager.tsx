@@ -1,10 +1,6 @@
-import React, { useEffect, useState } from "react";
-import {
-  getSupplierDues,
-  getCustomerDues,
-} from "../../services/dueService";
-import { deleteInvoice } from "../../services/invoiceService";
-import { deleteBill } from "../../services/billService";
+import { getSupplierDues, getCustomerDues, } from "../../services/dueService";
+import { clearInvoiceDue, deleteInvoice } from "../../services/invoiceService";
+import { clearBillDue, deleteBill } from "../../services/billService";
 import { DueInvoice, DueBill } from "../../types/models";
 
 const DueManager: React.FC = () => {
@@ -25,7 +21,7 @@ const DueManager: React.FC = () => {
       ]);
       setDueInvoices(invoicesResponse);
       setDueBills(billsResponse);
-    } catch (err: any) {
+    } catch (err: any) => {
       setError(err.response?.data?.message || "Failed to fetch dues");
     } finally {
       setLoading(false);
@@ -35,8 +31,6 @@ const DueManager: React.FC = () => {
   useEffect(() => {
     fetchDues();
   }, []);
-
-  
 
   const handleClearIndividual = async (id: string, type: "supplier" | "customer") => {
     const confirmMsg =
@@ -48,12 +42,12 @@ const DueManager: React.FC = () => {
 
     try {
       if (type === "supplier") {
-        await deleteInvoice(id);
+        await clearInvoiceDue(id);
       } else {
-        await deleteBill(id);
+        await clearBillDue(id);
       }
       fetchDues();
-    } catch (err: any) {
+    } catch (err: any) => {
       setError(err.response?.data?.message || "Failed to clear due");
     }
   };
@@ -172,7 +166,7 @@ const DueManager: React.FC = () => {
                           onClick={() =>
                             handleClearIndividual(item._id, isSupplierTab ? "supplier" : "customer")
                           }
-                          className="text-white bg-red-600 hover:bg-red-700 text-xs px-3 py-1 rounded"
+                          className="text-white bg-green-600 hover:bg-green-700 text-xs px-3 py-1 rounded"
                         >
                           Clear
                         </button>
@@ -211,7 +205,7 @@ const DueManager: React.FC = () => {
                       onClick={() =>
                         handleClearIndividual(item._id, isSupplierTab ? "supplier" : "customer")
                       }
-                      className="text-white bg-red-600 hover:bg-red-700 text-sm px-3 py-1 rounded"
+                      className="text-white bg-green-600 hover:bg-green-700 text-sm px-3 py-1 rounded"
                     >
                       Clear
                     </button>

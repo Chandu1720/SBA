@@ -6,7 +6,7 @@ const moment = require('moment');
 
 // Schedule a job to run every day at 10:00 AM
 const scheduleJobs = () => {
-    cron.schedule('0 10 * * *', async () => {
+    cron.schedule('* * * * *', async () => {
         console.log('Running daily check for due dates...');
         await checkSupplierDues();
         await checkCustomerDues();
@@ -15,11 +15,14 @@ const scheduleJobs = () => {
 
 const checkSupplierDues = async () => {
     try {
+        console.log('Checking for supplier dues...');
         const sevenDaysFromNow = moment().add(7, 'days').endOf('day').toDate();
         const overdueInvoices = await Invoice.find({
             dueDate: { $lte: sevenDaysFromNow },
             paymentStatus: { $ne: 'Paid' }
         }).populate('supplierId');
+
+        console.log(`Found ${overdueInvoices.length} overdue invoices.`);
 
         for (const invoice of overdueInvoices) {
             const existingNotification = await Notification.findOne({
@@ -40,6 +43,7 @@ const checkSupplierDues = async () => {
                 }
                 
                 if (invoice.supplierId) {
+                    console.log(`Creating notification for invoice ${invoice._id}`);
                     await Notification.create({
                         message,
                         type: 'supplier_due',
@@ -56,11 +60,14 @@ const checkSupplierDues = async () => {
 
 const checkCustomerDues = async () => {
     try {
+        console.log('Checking for customer dues...');
         const thirtyDaysAgo = moment().subtract(30, 'days').startOf('day').toDate();
         const overdueBills = await Bill.find({
             billDate: { $lte: thirtyDaysAgo },
             paymentStatus: { $ne: 'Paid' }
         });
+
+        console.log(`Found ${overdueBills.length} overdue bills.`);
 
         for (const bill of overdueBills) {
             const existingNotification = await Notification.findOne({
@@ -72,6 +79,7 @@ const checkCustomerDues = async () => {
                 const daysOverdue = moment().startOf('day').diff(billDate, 'days');
                 const message = `Payment from ${bill.customerName || 'customer'} for bill #${bill.billNumber} is overdue by ${daysOverdue} days.`;
 
+                console.log(`Creating notification for bill ${bill._id}`);
                 await Notification.create({
                     message,
                     type: 'customer_due',

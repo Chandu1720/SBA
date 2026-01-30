@@ -26,9 +26,8 @@ app.use(cors({
   },
   credentials: true, // Allow cookies to be sent with requests
 }));
-app.use(express.json());
-app.use(cookieParser());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+const uploadDir = process.env.RENDER_DISK_MOUNT_PATH || path.join(__dirname, 'uploads');
+app.use('/uploads', express.static(uploadDir));
 
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/bms";
@@ -79,16 +78,6 @@ app.get('/api/dues/customers', [auth, authorize(['bills:view'])], async (req, re
 });
 
 const scheduleJobs = require('./utils/cronJobs');
-
-if (process.env.NODE_ENV === 'production') {
-  // Serve frontend files
-  app.use(express.static(path.join(__dirname, '../bms-frontend-ts/build')));
-
-  // For any other GET request, send the index.html file
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../bms-frontend-ts/build', 'index.html'));
-  });
-}
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

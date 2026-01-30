@@ -33,7 +33,22 @@ export const updateInvoice = async (
   return response.data;
 };
 
+
+
 export const deleteInvoice = async (id: string) => {
+
   const response = await api.delete(`/invoices/${id}`);
+
   return response.data;
+
+};
+
+
+
+export const clearInvoiceDue = async (id: string) => {
+
+  const response = await api.put(`/invoices/${id}/clear-due`);
+
+  return response.data;
+
 };

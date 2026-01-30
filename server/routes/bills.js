@@ -175,6 +175,25 @@ router.put('/:id', [auth, authorize(['bills:edit'])], async (req, res) => {
     }
 });
   
+
+// PUT clear a bill due
+router.put('/:id/clear-due', [auth, authorize(['bills:edit'])], async (req, res) => {
+    try {
+        const { id } = req.params;
+        const bill = await Bill.findById(id);
+        if (!bill) {
+            return res.status(404).json({ message: 'Bill not found.' });
+        }
+        bill.paidAmount = bill.grandTotal;
+        bill.paymentStatus = 'Paid';
+        const updatedBill = await bill.save();
+        res.json(updatedBill);
+    } catch (err) {
+      console.error(`Error clearing bill due ${id}:`, err);
+      res.status(400).json({ message: err.message });
+    }
+});
+
 // DELETE a bill
 // 💡 IMPORTANT: Deleting a bill should ideally reverse the stock deduction.
 // This is a placeholder and needs to be implemented.
