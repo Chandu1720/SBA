@@ -15,17 +15,23 @@ const Bill = require('./models/Bill');
 const auth = require('./middleware/auth');
 
 const app = express();
-const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000,http://localhost:3001').split(',');
+// const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000,http://localhost:3001,bms-1-bne0.onrender.com').split(',');
+// app.use(cors({
+//   origin: (origin, callback) => {
+//     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+//       callback(null, true);
+//     } else {
+//       callback(new Error('Not allowed by CORS'));
+//     }
+//   },
+//   credentials: true, // Allow cookies to be sent with requests
+// }));
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true, // Allow cookies to be sent with requests
+  credentials: true
 }));
+
+app.use(express.json());
+app.use(cookieParser());
 const uploadDir = process.env.RENDER_DISK_MOUNT_PATH || path.join(__dirname, 'uploads');
 app.use('/uploads', express.static(uploadDir));
 
