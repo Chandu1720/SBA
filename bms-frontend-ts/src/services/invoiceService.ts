@@ -1,4 +1,4 @@
-import { Invoice, InvoicePayload } from '../types/models';
+import { Invoice } from '../types/models';
 import api from './api';
 
 export const getInvoices = async (params?: any) => {

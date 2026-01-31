@@ -11,7 +11,6 @@ const Kits: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { user } = useUser();
-    const navigate = useNavigate();
 
     const canCreate = user?.permissions.includes('kits:create');
     const canEdit = user?.permissions.includes('kits:edit');

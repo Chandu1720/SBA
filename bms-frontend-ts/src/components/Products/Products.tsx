@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Product } from '../../types/models';
 import { getAllProducts, deleteProduct } from '../../services/productService';
 import { Link, useNavigate } from 'react-router-dom';

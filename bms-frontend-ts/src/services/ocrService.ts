@@ -74,18 +74,18 @@ export const parseInvoiceText = (text: string): ExtractedInvoiceData => {
   // IMPORTANT: Prioritize "Invoice No" - avoid "Buyer Order No", "Ack No", "IRN" and other numbers
   const invoiceNumberPatterns = [
     /invoice\s+(?:ny|no)\.?\s*[,:]?\s*["]?([A-Z0-9]+?)(?:\s|$|")/i,       // Invoice Ny, "0055SBA26P6062 (handles OCR misreads like "Ny" instead of "No")
-    /invoice\s+number\s*:?\s*["]?([A-Z0-9\-\/]+?)(?:\s|$|")/i,            // Invoice Number: "0055SBA26P6062
+    /invoice\s+number\s*:?\s*["]?([A-Z0-9-/]+?)(?:\s|$|")/i,            // Invoice Number: "0055SBA26P6062
     /invoice\s*(?:no|ny)\.?\s*:?\s*["]?([A-Z0-9]+)/i,                     // Invoice No:0055SBA26P6062
-    /inv\.?\s+(?:no|ny)\.?\s*:?\s*["]?([A-Z0-9\-\/]+)/i,                 // Inv No or Inv Ny
+    /inv\.?\s+(?:no|ny)\.?\s*:?\s*["]?([A-Z0-9-/]+)/i,                 // Inv No or Inv Ny
   ];
 
   for (const pattern of invoiceNumberPatterns) {
     const match = text.match(pattern);
     console.log(`Testing pattern: ${pattern} - Match: ${match ? match[1] : 'NO MATCH'}`);
     if (match && match[1]) {
-      let num = match[1].trim().replace(/[^A-Z0-9\-\/]/gi, '');
+      let num = match[1].trim().replace(/[^A-Z0-9-/]/gi, '');
       // Remove trailing special chars
-      num = num.replace(/[\-\/]+$/, '');
+      num = num.replace(/[-/]+$/, '');
       console.log(`Extracted candidate: ${num}`);
       // Skip if it looks like it's from unwanted fields (Buyer, Ack, IRN, Description, etc.)
       if (num.length >= 4 && num.length <= 30 && !num.match(/^(buyer|order|po|purchase|ack|arn|irn|gst|hsn|customer|credit|description|part)/i)) {
@@ -106,12 +106,12 @@ export const parseInvoiceText = (text: string): ExtractedInvoiceData => {
   // Handles: DD/MM/YYYY (03/01/2026), DD-Mon-YY (24-Dec-25), DD-MM-YYYY, etc.
   // Priority: "Dated:" (HBS) > "Date:" (HERO) > Generic patterns
   const datePatterns = [
-    /dated\s*:?\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/i,                      // Dated: 03/01/2026 (HBS format)
-    /dated\s*:?\s*(\d{1,2}[-\/][A-Za-z]{3,}[-\/]\d{2,4})/i,              // Dated: 24-Dec-25 (HBS format)
-    /(?:invoice\s+)?date\s*:?\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/i,       // Invoice Date: 03/01/2026 or Date: 03/01/2026
-    /(?:invoice\s+)?date\s*:?\s*(\d{1,2}[-\/][A-Za-z]{3,}[-\/]\d{2,4})/i, // Date: 24-Dec-25
-    /(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/,                                    // DD/MM/YYYY anywhere
-    /(\d{1,2}[-\/][A-Za-z]{3,}[-\/]\d{2,4})/,                             // DD-Mon-YYYY anywhere
+    /dated\s*:?\s*(\d{1,2}[-/]\d{1,2}[-/]\d{4})/i,                      // Dated: 03/01/2026 (HBS format)
+    /dated\s*:?\s*(\d{1,2}[-/][A-Za-z]{3,}[-/]\d{2,4})/i,              // Dated: 24-Dec-25 (HBS format)
+    /(?:invoice\s+)?date\s*:?\s*(\d{1,2}[-/]\d{1,2}[-/]\d{4})/i,       // Invoice Date: 03/01/2026 or Date: 03/01/2026
+    /(?:invoice\s+)?date\s*:?\s*(\d{1,2}[-/][A-Za-z]{3,}[-/]\d{2,4})/i, // Date: 24-Dec-25
+    /(\d{1,2}[-/]\d{1,2}[-/]\d{4})/,                                    // DD/MM/YYYY anywhere
+    /(\d{1,2}[-/][A-Za-z]{3,}[-/]\d{2,4})/,                             // DD-Mon-YYYY anywhere
   ];
 
   const extractedDates: string[] = [];
@@ -196,7 +196,7 @@ const normalizeDateString = (dateStr: string): string => {
   };
 
   // Try DD-Mon-YY format (24-Dec-25)
-  const monMatch = normalized.match(/^(\d{1,2})[-\/]([A-Za-z]{3,})[-\/](\d{2,4})$/i);
+  const monMatch = normalized.match(/^(\d{1,2})[-/]([A-Za-z]{3,})[-/](\d{2,4})$/i);
   if (monMatch) {
     const [, day, monthStr, yearStr] = monMatch;
     const month = monthMap[monthStr.toLowerCase()];
@@ -207,21 +207,21 @@ const normalizeDateString = (dateStr: string): string => {
   }
 
   // Try DD/MM/YYYY or DD-MM-YYYY
-  const dmyMatch = normalized.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+  const dmyMatch = normalized.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
   if (dmyMatch) {
     const [, day, month, year] = dmyMatch;
     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   }
 
   // Try YYYY-MM-DD or YYYY/MM/DD
-  const ydmMatch = normalized.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
+  const ydmMatch = normalized.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
   if (ydmMatch) {
     const [, year, month, day] = ydmMatch;
     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   }
 
   // Try MM/DD/YYYY (US format as fallback)
-  const mdyMatch = normalized.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+  const mdyMatch = normalized.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
   if (mdyMatch) {
     // Try to determine if it's DD/MM or MM/DD by checking if month > 12
     const [, first, second, year] = mdyMatch;

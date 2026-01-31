@@ -26,25 +26,12 @@ const BillsList: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
-  const downloadRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   const { user } = useUser();
   const canCreate = user?.role === "Admin";
   const canUpdate = user?.role === "Admin";
   const canDelete = user?.role === "Admin";
-
-  // Close download menu on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (downloadRef.current && !downloadRef.current.contains(e.target as Node)) {
-        setShowDownloadMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   const fetchBills = useCallback(async () => {
     try {

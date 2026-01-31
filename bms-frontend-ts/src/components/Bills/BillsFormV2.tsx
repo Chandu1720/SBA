@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useForm, useFieldArray, Controller } from "react-hook-form";
-import { Bill, Product, Kit } from "../../types/models";
+import { useForm, useFieldArray } from "react-hook-form";
+import { Product, Kit } from "../../types/models";
 import { createBill, updateBill, getBillById } from "../../services/billService";
 import { getProducts } from "../../services/productService";
 import { getKits } from "../../services/kitService";
 import { useUser } from "../../context/UserContext";
 import toast from "react-hot-toast";
 import { useNavigate, useParams } from "react-router-dom";
-import { PlusCircle, Trash2, ArrowLeft, Save, Loader2, X, CalendarDays, User2, Phone, IndianRupee, FileText, CreditCard } from "lucide-react";
+import { PlusCircle, Trash2, Save, Loader2, X, CalendarDays, User2, Phone, FileText, CreditCard } from "lucide-react";
 import Modal from 'react-modal';
 
 type LineItem = {

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { getKitById, createKit, updateKit } from '../../services/kitService';
 import { getProducts } from '../../services/productService';
-import { Kit, Product } from '../../types/models';
+import { Product } from '../../types/models';
 import { useUser } from '../../context/UserContext';
 import { X, Plus } from 'lucide-react';
 
