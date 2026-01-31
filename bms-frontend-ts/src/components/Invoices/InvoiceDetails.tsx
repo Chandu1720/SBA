@@ -23,8 +23,8 @@ const InvoiceDetails: React.FC = () => {
     if (!invoice) return;
 
     try {
-      // Open the invoice copy directly
-      window.open(`${api.defaults.baseURL?.replace('/api', '')}${invoice.invoiceCopy}`, '_blank');
+      // Open the invoice copy directly, which is now a Cloudinary URL
+      window.open(invoice.invoiceCopy, '_blank');
     } catch (error: any) {
       console.error('Error viewing file:', error);
       alert('Failed to view file. Please check your permissions.');
@@ -35,9 +35,9 @@ const InvoiceDetails: React.FC = () => {
     if (!invoice) return;
 
     try {
-      // Download the invoice copy directly
+      // Download the invoice copy directly from its Cloudinary URL
       const link = document.createElement('a');
-      link.href = `${api.defaults.baseURL?.replace('/api', '')}${invoice.invoiceCopy}`;
+      link.href = invoice.invoiceCopy;
       link.download = `Invoice-${invoice.invoiceNumber}${invoice.invoiceCopy.substring(invoice.invoiceCopy.lastIndexOf('.'))}`;
       document.body.appendChild(link);
       link.click();
@@ -105,10 +105,14 @@ const InvoiceDetails: React.FC = () => {
       ? "bg-green-100 text-green-800"
       : invoice.paymentStatus === "Pending"
       ? "bg-yellow-100 text-yellow-800"
-      : "bg-red-100 text-red-800";
+      : invoice.paymentStatus === "Red"
+      ? "bg-red-100 text-red-800"
+      : ""; // Default or handle other statuses
 
-  // 💡 Construct the logo URL using the API base URL
-  const logoUrl = shopProfile?.logo_url ? `${api.defaults.baseURL?.replace('/api', '')}${shopProfile.logo_url}` : '';
+  // 💡 Correctly construct the logo URL
+  const logoUrl = shopProfile?.logo_url && shopProfile.logo_url.startsWith('http')
+    ? shopProfile.logo_url
+    : ''; // Use directly if absolute, otherwise none (old data requires re-upload)
 
   return (
     <div className="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-lg">
