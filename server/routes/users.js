@@ -67,7 +67,12 @@ router.post('/', [auth, authorize(['users:create'])], async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    user = new User({ name, email, password, role });
+    const shop = req.user.shop;
+    if (!shop) {
+        return res.status(400).json({ message: 'Creating user is not associated with a shop.' });
+    }
+
+    user = new User({ name, email, password, role, shop });
 
     // Password hashing is handled by the pre-save hook in the User model
     await user.save();
