@@ -51,12 +51,12 @@ userSchema.methods.comparePassword = async function (password) {
 // Method to generate JWT
 userSchema.methods.generateAuthToken = async function () {
   await this.populate('permissions');
-  return jwt.sign({ id: this._id, name: this.name, role: this.role, permissions: this.permissions.map(p => p.name), shop: this.shop }, process.env.JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ id: this._id, name: this.name, role: this.role, permissions: this.permissions.map(p => p.name), shop: this.shop }, process.env.JWT_SECRET, { expiresIn: '20m' });
 };
 
 // Method to generate Refresh Token
 userSchema.methods.generateRefreshToken = async function () {
-  return jwt.sign({ id: this._id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ id: this._id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '20m' });
 };
 
 const User = mongoose.model('User', userSchema);
