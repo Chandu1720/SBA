@@ -21,7 +21,7 @@ const DueManager: React.FC = () => {
       ]);
       setDueInvoices(invoicesResponse);
       setDueBills(billsResponse);
-    } catch (err: any) => {
+    } catch (err: any) {
       setError(err.response?.data?.message || "Failed to fetch dues");
     } finally {
       setLoading(false);
@@ -47,7 +47,7 @@ const DueManager: React.FC = () => {
         await clearBillDue(id);
       }
       fetchDues();
-    } catch (err: any) => {
+    } catch (err: any) {
       setError(err.response?.data?.message || "Failed to clear due");
     }
   };
