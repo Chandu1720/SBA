@@ -6,7 +6,7 @@ import { User } from '../../types/models';
 const UserForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [user, setUser] = useState<Partial<User>>({ name: '', email: '', password: '' });
+  const [user, setUser] = useState<Partial<User>>({ name: '', email: '', password: '',role: 'User', });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isEditMode = Boolean(id);
