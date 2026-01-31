@@ -25,8 +25,10 @@ const ShopProfileManager: React.FC = () => {
           setGstin(data.gstin);
           setAddress(data.address);
           setPhoneNumber(data.phone_number);
-          if (data.logo_url) {
-            setLogoPreview(`http://localhost:5002${data.logo_url}`);
+          if (data.logo_url && data.logo_url.startsWith('http')) {
+            setLogoPreview(data.logo_url);
+          } else {
+            setLogoPreview(null); // Handle old/relative paths by showing no preview
           }
         }
       } catch (err: any) {
@@ -44,10 +46,7 @@ const ShopProfileManager: React.FC = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setLogoFile(file);
-      setLogoPreview(URL.createObjectURL(file)); // Create a preview URL
-    } else {
-      setLogoFile(null);
-      setLogoPreview(shopProfile?.logo_url ? `http://localhost:5002${shopProfile.logo_url}` : null);
+      setLogoPreview(URL.createObjectURL(file)); // Create a temporary local preview URL
     }
   };
 
@@ -74,7 +73,7 @@ const ShopProfileManager: React.FC = () => {
       setAddress(updatedProfile.address);
       setPhoneNumber(updatedProfile.phone_number);
       if (updatedProfile.logo_url) {
-        setLogoPreview(`http://localhost:5002${updatedProfile.logo_url}`);
+        setLogoPreview(updatedProfile.logo_url); // The new URL from Cloudinary will be absolute
       }
       setLogoFile(null); // Clear file input after successful upload
       setSuccess('Shop profile updated successfully!');
