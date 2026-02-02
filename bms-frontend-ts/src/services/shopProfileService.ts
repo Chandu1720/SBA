@@ -7,6 +7,13 @@ export interface ShopProfile {
   address: string;
   phone_number: string;
   logo_url?: string;
+  bankDetails: {
+    accountHolderName: string;
+    accountNumber: string;
+    ifsc: string;
+    bankName: string;
+  };
+  qrCodePath?: string;
   createdAt?: string;
   updatedAt?: string;
 }
