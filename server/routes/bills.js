@@ -214,263 +214,228 @@ router.delete('/:id', [auth, authorize(['bills:delete'])], async (req, res) => {
   
 // GET download bill as PDF
 router.get('/:id/download', [auth, authorize(['bills:view'])], async (req, res) => {
-    try {
-        const { id } = req.params;
-        const bill = await Bill.findById(id).populate('items.itemId');
-        const shopProfile = await ShopProfile.findOne(); // Fetch shop profile
-    
-        if (!bill) {
-          return res.status(404).json({ message: "Bill not found" });
-        }
-        
-        const doc = new PDFDocument({ margin: 40, size: 'A4' });
+  try {
+    const { id } = req.params;
 
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=bill-${id}.pdf`);
+    const bill = await Bill.findById(id).populate('items.itemId');
+    const shopProfile = await ShopProfile.findOne();
 
-        doc.pipe(res);
+    if (!bill) {
+      return res.status(404).json({ message: 'Bill not found' });
+    }
 
-        const startX = 40;
-        const fullWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-        const pageHeight = doc.page.height;
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
 
-        let y = 50;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=bill-${bill.billNumber}.pdf`);
+    doc.pipe(res);
 
-        /************************************
-         * HEADER (SHOP INFO)
-         ************************************/
-        const shopBoxHeight = 80;
-        const logoWidth = 50;
-        const shopDetailsX = startX + logoWidth + 20;
+    const startX = 40;
+    const fullWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const pageHeight = doc.page.height;
+    let y = 50;
 
-        doc.fontSize(9)
-          .text('ORIGINAL FOR RECIPIENT', startX, y - 12, { align: 'right', width: fullWidth });
+    /***********************
+     * HEADER (SHOP INFO)
+     ***********************/
+    const logoWidth = 55;
+    const shopDetailsX = startX + logoWidth + 15;
 
-        if (shopProfile?.logo_url) {
-          const logoPath = path.join(__dirname,'..', '..', shopProfile.logo_url);
-          if (fs.existsSync(logoPath)) {
-            doc.image(logoPath, startX, y + 5, { width: logoWidth });
-          }
-        }
+    doc.fontSize(9)
+      .text('TAX INVOICE', startX, y - 15, { align: 'right', width: fullWidth });
 
-        doc.fontSize(18).font('Helvetica-Bold')
-          .text(shopProfile?.shop_name || '', shopDetailsX, y + 15);
+    if (shopProfile?.logo_url) {
+      const logoPath = path.resolve(process.cwd(), shopProfile.logo_url);
+      if (fs.existsSync(logoPath)) {
+        doc.image(logoPath, startX, y, { width: logoWidth });
+      }
+    }
 
-        doc.fontSize(10).font('Helvetica')
-          .text(`GSTIN: ${shopProfile?.gstin || ''}`, shopDetailsX, y + 35)
-          .text(shopProfile?.address || '', shopDetailsX, y + 48)
-          .text(`Mobile: ${shopProfile?.phone_number || ''}`, shopDetailsX, y + 61);
+    doc.font('Helvetica-Bold').fontSize(18)
+      .text(shopProfile?.shop_name || '', shopDetailsX, y + 5);
 
-        y += shopBoxHeight + 10;
+    doc.font('Helvetica').fontSize(9)
+      .text(`GSTIN: ${shopProfile?.gstin || ''}`, shopDetailsX, y + 28)
+      .text(shopProfile?.address || '', shopDetailsX, y + 40)
+      .text(`Mobile: ${shopProfile?.phone_number || ''}`, shopDetailsX, y + 54);
 
+    y += 90;
 
-        /************************************
-         * CUSTOMER + BILL INFO BOX
-         ************************************/
-        const infoBoxHeight = 100;
-        doc.rect(startX, y, fullWidth, infoBoxHeight).stroke();
+    /***********************
+     * CUSTOMER + BILL INFO
+     ***********************/
+    doc.rect(startX, y, fullWidth, 90).stroke();
+    doc.moveTo(startX + fullWidth / 2, y)
+       .lineTo(startX + fullWidth / 2, y + 90)
+       .stroke();
 
-        const halfWidth = fullWidth / 2;
-        doc.moveTo(startX + halfWidth, y).lineTo(startX + halfWidth, y + infoBoxHeight).stroke();
+    doc.font('Helvetica-Bold').fontSize(10)
+      .text('Customer Details', startX + 10, y + 8);
 
-        doc.font('Helvetica-Bold').fontSize(10).text('Customer Details:', startX + 10, y + 5);
-        doc.font('Helvetica').fontSize(9)
-          .text(`Name: ${bill.customerName || ''}`, startX + 10, y + 18)
-          .text(`Phone: ${bill.customerPhone || ''}`, startX + 10, y + 30);
+    doc.font('Helvetica').fontSize(9)
+      .text(`Name: ${bill.customerName || ''}`, startX + 10, y + 26)
+      .text(`Phone: ${bill.customerPhone || ''}`, startX + 10, y + 40);
 
-        const rightX = startX + halfWidth + 10;
-        const rightValueX = rightX + 75;
+    const rx = startX + fullWidth / 2 + 10;
 
-        doc.font('Helvetica-Bold').fontSize(10)
-          .text('Invoice #:', rightX, y + 5)
-          .text('Invoice Date:', rightX, y + 18);
+    doc.font('Helvetica-Bold').fontSize(10)
+      .text('Invoice No:', rx, y + 8)
+      .text('Invoice Date:', rx, y + 26);
 
-        doc.font('Helvetica').fontSize(9)
-          .text(bill.billNumber, rightValueX, y + 5)
-          .text(bill.billDate ? new Date(bill.billDate).toLocaleDateString() : '', rightValueX, y + 18);
+    doc.font('Helvetica').fontSize(9)
+      .text(bill.billNumber, rx + 80, y + 8)
+      .text(new Date(bill.billDate).toLocaleDateString(), rx + 80, y + 26);
 
-        y += infoBoxHeight + 10;
+    y += 110;
 
+    /***********************
+     * TABLE COLUMNS
+     ***********************/
+    const amountColWidth = 70;
+    const amountColX = startX + fullWidth - amountColWidth;
 
-        /************************************
-         * COLUMN SETUP HELPERS
-         ************************************/
-        const amountColWidth = 65;
-        const amountColX = startX + fullWidth - amountColWidth;
+    const gstColWidth = 55;
+    const gstColX = amountColX - gstColWidth;
 
-        const rateColWidth = 55;
-        const rateColX = amountColX - rateColWidth;
+    const rateColWidth = 55;
+    const rateColX = gstColX - rateColWidth;
 
-        const qtyColWidth = 40;
-        const qtyColX = rateColX - qtyColWidth;
+    const qtyColWidth = 40;
+    const qtyColX = rateColX - qtyColWidth;
 
-        const taxColWidth = 45;
-        const taxColX = qtyColX - taxColWidth;
+    const itemColX = startX + 30;
+    const itemColWidth = qtyColX - itemColX - 5;
 
-        const hsnColWidth = 60;
-        const hsnColX = taxColX - hsnColWidth;
+    function drawHeader() {
+      doc.rect(startX, y, fullWidth, 20).stroke();
+      y += 5;
 
-        const itemColX = startX + 30;
-        const itemColWidth = hsnColX - itemColX - 5;
+      doc.font('Helvetica-Bold').fontSize(9);
+      doc.text('#', startX + 10, y);
+      doc.text('Item', itemColX, y);
+      doc.text('Qty', qtyColX, y, { width: qtyColWidth, align: 'center' });
+      doc.text('Rate', rateColX, y, { width: rateColWidth, align: 'center' });
+      doc.text('GST', gstColX, y, { width: gstColWidth, align: 'center' });
+      doc.text('Amount', amountColX, y, { width: amountColWidth, align: 'right' });
 
+      y += 15;
+    }
 
-        /************************************
-         * DRAW TABLE HEADER
-         ************************************/
-        function drawHeader() {
-          doc.rect(startX, y, fullWidth, 20).stroke();
-          y += 5;
-          doc.font('Helvetica-Bold').fontSize(9);
-          doc.text('#', startX + 10, y);
-          doc.text('Item', itemColX, y);
-          doc.text('HSN/SAC', hsnColX, y, { width: hsnColWidth, align: 'center' });
-          doc.text('Tax', taxColX, y, { width: taxColWidth, align: 'center' });
-          doc.text('Qty', qtyColX, y, { width: qtyColWidth, align: 'center' });
-          doc.text('Rate / Item', rateColX, y, { width: rateColWidth, align: 'center' });
-          doc.text('Amount', amountColX, y, { width: amountColWidth, align: 'right' });
-          y += 15;
-        }
+    function drawGrid() {
+      const bottom = pageHeight - 170;
+      [itemColX - 5, qtyColX - 5, rateColX - 5, gstColX - 5, amountColX - 5]
+        .forEach(x => {
+          doc.moveTo(x, y)
+             .lineTo(x, bottom)
+             .dash(1, { space: 2 })
+             .stroke()
+             .undash();
+        });
+    }
 
-        /************************************
-         * GRID: VERTICAL DOTTED LINES
-         ************************************/
-        function drawVerticalGrid() {
-          const vStart = y;
-          const vEnd = pageHeight - 160; 
+    drawHeader();
+    drawGrid();
 
-          function dottedLine(x) {
-            doc.moveTo(x, vStart).lineTo(x, vEnd).dash(1, { space: 2 }).stroke().undash();
-          }
-          dottedLine(itemColX - 5);
-          dottedLine(hsnColX - 5);
-          dottedLine(qtyColX - 5);
-          dottedLine(rateColX - 5);
-          dottedLine(amountColX - 5);
-        }
+    /***********************
+     * ITEMS
+     ***********************/
+    let i = 1;
+    let totalGST = 0;
 
-
-        /************************************
-         * ITEMS LOOP WITH PAGINATION
-         ************************************/
-        const items = bill.items || [];
-        let itemCounter = 1;
-        
-        drawHeader();
-        drawVerticalGrid();
-        
-      for (let item of items) {
-    if (y > pageHeight - 200) {
+    for (const item of bill.items) {
+      if (y > pageHeight - 200) {
         doc.addPage();
         y = 50;
         drawHeader();
-        drawVerticalGrid();
-    }
-
-    // 1. Resolve Name based on itemType
-    let itemName = 'N/A';
-    if (item.itemType === 'Simple') {
-        itemName = item.name;
-    } else if (item.itemId) {
-        itemName = item.itemId.name;
-    }
-
-    // 2. Resolve HSN
-    const itemHSN = (item.itemId && item.itemId.hsn_sac) ? item.itemId.hsn_sac : 'N/A';
-    
-    // 3. Resolve Tax (Note: If tax isn't in your schema, you need to add it or pull it from the product)
-    // For now, checking if it exists on the populated product or the item itself
-    const taxRate = item.taxRate || (item.itemId && item.itemId.taxRate) || 0;
-
-    doc.font('Helvetica').fontSize(9);
-    doc.text(`${itemCounter++}`, startX + 10, y);
-    doc.text(itemName, itemColX, y, { width: itemColWidth });
-    doc.text(itemHSN, hsnColX, y, { width: hsnColWidth, align: 'center' });
-    doc.text(`${taxRate}%`, taxColX, y, { width: taxColWidth, align: 'center' });
-    doc.text(`${item.quantity}`, qtyColX, y, { width: qtyColWidth, align: 'center' });
-    doc.text(`${item.rate.toFixed(2)}`, rateColX, y, { width: rateColWidth, align: 'center' });
-    doc.text(`${item.total.toFixed(2)}`, amountColX, y, { width: amountColWidth, align: 'right' });
-    
-    y += 15;
-}
-
-
-        /************************************
-         * ONLY ON LAST PAGE: TOTAL + QR + BANK + SIGN
-         ************************************/
-        y = pageHeight - 150; // Position near the bottom
-        doc.font('Helvetica-Bold').fontSize(10);
-        doc.text(`Total: ₹${bill.grandTotal.toFixed(2)}`, amountColX - 60, y, { width: amountColWidth + 60, align: 'right' });
-
-        const footerY = pageHeight - 140;
-        const footerHeight = 80;
-
-        doc.rect(startX, footerY, fullWidth, footerHeight).stroke();
-
-        const colWidth = fullWidth / 3;
-        const col2X = startX + colWidth;
-        const col3X = startX + colWidth * 2;
-
-        doc.moveTo(col2X, footerY).lineTo(col2X, footerY + footerHeight).stroke();
-        doc.moveTo(col3X, footerY).lineTo(col3X, footerY + footerHeight).stroke();
-
-
-        /***** BANK DETAILS *****/
-        doc.font('Helvetica-Bold').fontSize(9)
-          .text('Bank Details', startX + 10, footerY + 8);
-        doc.font('Helvetica').fontSize(8)
-          .text(`Bank: ${shopProfile?.bank_name || 'YES BANK'}`, startX + 10, footerY + 22)
-          .text(`A/C: ${shopProfile?.account_no || ''}`, startX + 10, footerY + 34)
-          .text(`IFSC: ${shopProfile?.ifsc || ''}`, startX + 10, footerY + 46);
-
-
-        /***** QR *****/
-        doc.font('Helvetica-Bold').fontSize(9)
-          .text('Pay using UPI', col2X + 10, footerY + 5);
-
-        if (shopProfile?.qr_url) {
-          const qrPath = path.join(__dirname, '..', '..', shopProfile.qr_url);
-          if (fs.existsSync(qrPath)) {
-            doc.image(qrPath, col2X + 20, footerY + 20, {
-              width: colWidth - 40,
-              height: footerHeight - 40,
-              fit: [colWidth - 40, footerHeight - 40]
-            });
-          }
-        }
-
-
-        /***** SIGNATURE *****/
-        const sigX = col3X + 10;
-        doc.font('Helvetica-Bold').fontSize(9)
-          .text(`For ${shopProfile?.shop_name || ''}`, sigX, footerY + 5);
-
-        if (shopProfile?.sign_url) {
-          const signPath = path.join(__dirname, '..', '..', shopProfile.sign_url);
-          if (fs.existsSync(signPath)) {
-            doc.image(signPath, sigX + 20, footerY + 20, { width: colWidth - 60 });
-          }
-        }
-
-        doc.font('Helvetica').fontSize(8)
-          .text('Authorized Signatory', sigX + 20, footerY + footerHeight - 18);
-
-
-        /***** FOOT NOTE *****/
-        doc.fontSize(7).text(
-          'This is a computer-generated invoice',
-          startX,
-          footerY + footerHeight + 5,
-          { width: fullWidth, align: 'center' }
-        );
-
-
-        doc.end();
-    
-      } catch (err) {
-        console.error(`Error generating bill PDF:`, err);
-        res.status(500).json({ message: err.message });
+        drawGrid();
       }
-  });
+
+      const name =
+        item.itemType === 'Simple'
+          ? item.name
+          : item.itemId?.name || 'N/A';
+
+      const gstRate = item.taxRate || 18;
+      const base = item.quantity * item.rate;
+      const gstAmt = (base * gstRate) / 100;
+      const total = base + gstAmt;
+
+      totalGST += gstAmt;
+
+      doc.font('Helvetica').fontSize(9);
+      doc.text(i++, startX + 10, y);
+      doc.text(name, itemColX, y, { width: itemColWidth });
+      doc.text(item.quantity.toString(), qtyColX, y, { width: qtyColWidth, align: 'center' });
+      doc.text(item.rate.toFixed(2), rateColX, y, { width: rateColWidth, align: 'center' });
+      doc.text(`₹${gstAmt.toFixed(2)}`, gstColX, y, { width: gstColWidth, align: 'center' });
+      doc.text(`₹${total.toFixed(2)}`, amountColX, y, { width: amountColWidth, align: 'right' });
+
+      y += 15;
+    }
+
+    /***********************
+     * TOTALS
+     ***********************/
+    y = pageHeight - 160;
+
+    doc.font('Helvetica').fontSize(9)
+      .text(`GST Total: ₹${totalGST.toFixed(2)}`, amountColX - 80, y, {
+        width: amountColWidth + 80,
+        align: 'right'
+      });
+
+    doc.font('Helvetica-Bold').fontSize(11)
+      .text(`Grand Total: ₹${bill.grandTotal.toFixed(2)}`, amountColX - 80, y + 15, {
+        width: amountColWidth + 80,
+        align: 'right'
+      });
+
+    /***********************
+     * FOOTER (BANK + QR + SIGN)
+     ***********************/
+    const footerY = pageHeight - 120;
+    const colWidth = fullWidth / 3;
+
+    doc.rect(startX, footerY, fullWidth, 80).stroke();
+    doc.moveTo(startX + colWidth, footerY).lineTo(startX + colWidth, footerY + 80).stroke();
+    doc.moveTo(startX + colWidth * 2, footerY).lineTo(startX + colWidth * 2, footerY + 80).stroke();
+
+    doc.font('Helvetica-Bold').fontSize(9)
+      .text('Bank Details', startX + 10, footerY + 8);
+
+    doc.font('Helvetica').fontSize(8)
+      .text(`Bank: ${shopProfile?.bank_name || ''}`, startX + 10, footerY + 24)
+      .text(`A/C: ${shopProfile?.account_no || ''}`, startX + 10, footerY + 36)
+      .text(`IFSC: ${shopProfile?.ifsc || ''}`, startX + 10, footerY + 48);
+
+    if (shopProfile?.qr_url) {
+      const qrPath = path.resolve(process.cwd(), shopProfile.qr_url);
+      if (fs.existsSync(qrPath)) {
+        doc.image(qrPath, startX + colWidth + 20, footerY + 20, { width: colWidth - 40 });
+      }
+    }
+
+    if (shopProfile?.sign_url) {
+      const signPath = path.resolve(process.cwd(), shopProfile.sign_url);
+      if (fs.existsSync(signPath)) {
+        doc.image(signPath, startX + colWidth * 2 + 20, footerY + 20, { width: colWidth - 40 });
+      }
+    }
+
+    doc.fontSize(7)
+      .text('This is a computer generated invoice', startX, pageHeight - 30, {
+        width: fullWidth,
+        align: 'center'
+      });
+
+    doc.end();
+
+  } catch (err) {
+    console.error('PDF Error:', err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 
   // GET export bills
 router.get('/export', [auth, authorize(['bills:export'])], async (req, res) => {
