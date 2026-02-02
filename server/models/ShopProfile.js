@@ -26,6 +26,16 @@ const shopProfileSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  bankDetails: {
+    accountHolderName: { type: String, trim: true },
+    accountNumber: { type: String, trim: true },
+    ifsc: { type: String, trim: true },
+    bankName: { type: String, trim: true },
+  },
+  qrCodePath: {
+    type: String,
+    default: '',
+  },
 }, {
   timestamps: true, // Adds createdAt and updatedAt timestamps
 });
