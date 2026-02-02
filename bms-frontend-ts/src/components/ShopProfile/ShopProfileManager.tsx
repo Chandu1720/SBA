@@ -9,6 +9,12 @@ const ShopProfileManager: React.FC = () => {
   const [phone_number, setPhoneNumber] = useState<string>('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [qrCodeFile, setQrCodeFile] = useState<File | null>(null);
+  const [qrCodePreview, setQrCodePreview] = useState<string | null>(null);
+  const [accountHolderName, setAccountHolderName] = useState<string>('');
+  const [accountNumber, setAccountNumber] = useState<string>('');
+  const [ifsc, setIfsc] = useState<string>('');
+  const [bankName, setBankName] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -28,7 +34,18 @@ const ShopProfileManager: React.FC = () => {
           if (data.logo_url && data.logo_url.startsWith('http')) {
             setLogoPreview(data.logo_url);
           } else {
-            setLogoPreview(null); // Handle old/relative paths by showing no preview
+            setLogoPreview(null);
+          }
+          if (data.qrCodePath && data.qrCodePath.startsWith('http')) {
+            setQrCodePreview(data.qrCodePath);
+          } else {
+            setQrCodePreview(null);
+          }
+          if (data.bankDetails) {
+            setAccountHolderName(data.bankDetails.accountHolderName);
+            setAccountNumber(data.bankDetails.accountNumber);
+            setIfsc(data.bankDetails.ifsc);
+            setBankName(data.bankDetails.bankName);
           }
         }
       } catch (err: any) {
@@ -42,11 +59,19 @@ const ShopProfileManager: React.FC = () => {
     fetchProfile();
   }, []);
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleLogoFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setLogoFile(file);
-      setLogoPreview(URL.createObjectURL(file)); // Create a temporary local preview URL
+      setLogoPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleQrCodeFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setQrCodeFile(file);
+      setQrCodePreview(URL.createObjectURL(file));
     }
   };
 
@@ -61,8 +86,16 @@ const ShopProfileManager: React.FC = () => {
     formData.append('gstin', gstin);
     formData.append('address', address);
     formData.append('phone_number', phone_number);
+    formData.append('accountHolderName', accountHolderName);
+    formData.append('accountNumber', accountNumber);
+    formData.append('ifsc', ifsc);
+    formData.append('bankName', bankName);
+
     if (logoFile) {
       formData.append('logo', logoFile);
+    }
+    if (qrCodeFile) {
+      formData.append('qrCode', qrCodeFile);
     }
 
     try {
@@ -73,9 +106,19 @@ const ShopProfileManager: React.FC = () => {
       setAddress(updatedProfile.address);
       setPhoneNumber(updatedProfile.phone_number);
       if (updatedProfile.logo_url) {
-        setLogoPreview(updatedProfile.logo_url); // The new URL from Cloudinary will be absolute
+        setLogoPreview(updatedProfile.logo_url);
       }
-      setLogoFile(null); // Clear file input after successful upload
+      if (updatedProfile.qrCodePath) {
+        setQrCodePreview(updatedProfile.qrCodePath);
+      }
+      if (updatedProfile.bankDetails) {
+        setAccountHolderName(updatedProfile.bankDetails.accountHolderName);
+        setAccountNumber(updatedProfile.bankDetails.accountNumber);
+        setIfsc(updatedProfile.bankDetails.ifsc);
+        setBankName(updatedProfile.bankDetails.bankName);
+      }
+      setLogoFile(null);
+      setQrCodeFile(null);
       setSuccess('Shop profile updated successfully!');
     } catch (err: any) {
       setError(err.message);
@@ -158,12 +201,85 @@ const ShopProfileManager: React.FC = () => {
             id="logo"
             accept="image/*"
             className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            onChange={handleFileChange}
+            onChange={handleLogoFileChange}
           />
           {logoPreview && (
             <div className="mt-4">
               <p className="text-gray-700 text-sm font-bold mb-2">Current Logo:</p>
               <img src={logoPreview} alt="Shop Logo Preview" className="max-w-xs h-auto rounded shadow" />
+            </div>
+          )}
+        </div>
+
+        <h2 className="text-xl font-bold mt-6 mb-4">Bank Details</h2>
+
+        <div className="mb-4">
+          <label htmlFor="accountHolderName" className="block text-gray-700 text-sm font-bold mb-2">
+            Account Holder Name:
+          </label>
+          <input
+            type="text"
+            id="accountHolderName"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            value={accountHolderName}
+            onChange={(e) => setAccountHolderName(e.target.value)}
+          />
+        </div>
+
+        <div className="mb-4">
+          <label htmlFor="accountNumber" className="block text-gray-700 text-sm font-bold mb-2">
+            Account Number:
+          </label>
+          <input
+            type="text"
+            id="accountNumber"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            value={accountNumber}
+            onChange={(e) => setAccountNumber(e.target.value)}
+          />
+        </div>
+
+        <div className="mb-4">
+          <label htmlFor="ifsc" className="block text-gray-700 text-sm font-bold mb-2">
+            IFSC Code:
+          </label>
+          <input
+            type="text"
+            id="ifsc"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            value={ifsc}
+            onChange={(e) => setIfsc(e.target.value)}
+          />
+        </div>
+
+        <div className="mb-4">
+          <label htmlFor="bankName" className="block text-gray-700 text-sm font-bold mb-2">
+            Bank Name:
+          </label>
+          <input
+            type="text"
+            id="bankName"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            value={bankName}
+            onChange={(e) => setBankName(e.target.value)}
+          />
+        </div>
+
+        <div className="mb-4">
+          <label htmlFor="qrCode" className="block text-gray-700 text-sm font-bold mb-2">
+            QR Code:
+          </label>
+          <input
+            type="file"
+            id="qrCode"
+            accept="image/*"
+            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            onChange={handleQrCodeFileChange}
+          />
+          {qrCodePreview && (
+            <div className="mt-4">
+              <p className="text-gray-700 text-sm font-bold mb-2">Current QR Code:</p>
+              <img src={qrCodePreview} alt="QR Code Preview" className="max-w-xs h-auto rounded shadow" />
             </div>
           )}
         </div>
