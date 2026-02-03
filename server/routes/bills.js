@@ -247,127 +247,193 @@ router.get('/:id/download', [auth, authorize(['bills:view'])], async (req, res) 
       0
     );
 
-    const GST_RATE = bill.gstRate || 5; // configurable
-    const isIGST = shopProfile.state !== bill.placeOfSupply;
+    const GST_RATE = bill.gstRate || 18; // configurable
+    // const isIGST = shopProfile.state !== bill.placeOfSupply||"A";
 
-    let cgst = 0,
-      sgst = 0,
-      igst = 0;
+    // let gst = 0,
+     
 
-    if (isIGST) {
-      igst = taxableAmount * (GST_RATE / 100);
-    } else {
-      cgst = taxableAmount * (GST_RATE / 2 / 100);
-      sgst = taxableAmount * (GST_RATE / 2 / 100);
-    }
+    // if (isIGST) {
+     let gst = taxableAmount * (GST_RATE / 100);
+    // } else {
+    //   cgst = taxableAmount * (GST_RATE / 2 / 100);
+    //   sgst = taxableAmount * (GST_RATE / 2 / 100);
+    // }
 
-    const grandTotal = taxableAmount + cgst + sgst + igst;
+    const grandTotal = taxableAmount  + gst;
 
     // ================= RENDER FUNCTION =================
-    function renderInvoice(startY, copyLabel) {
-      let y = startY;
+   function renderInvoice(startY, copyLabel) {
+  let y = startY;
+  const left = 40;
+  const right = doc.page.width - 40;
+  const width = right - left;
 
-      // Copy label
-      doc.fontSize(8).text(copyLabel, pageWidth - 200, y - 20, { align: 'right' });
+  // ===== COPY LABEL =====
+  doc.fontSize(8)
+     .text(copyLabel, right - 200, y - 20, { align: 'right' });
 
-      // Header
-      doc.font('Helvetica-Bold').fontSize(14).text(shopProfile.shop_name, margin, y);
-      y += 15;
+  // ===== HEADER =====
+  doc.font('Helvetica-Bold').fontSize(14)
+     .text(shopProfile.shop_name, left, y);
 
-      doc.fontSize(9).font('Helvetica');
-      doc.text(shopProfile.address);
-      doc.text(`GSTIN: ${shopProfile.gstin}`);
-      doc.text(`Phone: ${shopProfile.phone_number}`);
+  doc.fontSize(9).font('Helvetica')
+     .text(`GSTIN: ${shopProfile.gstin}`)
+     .text(shopProfile.address)
+     .text(`Mobile: ${shopProfile.phone_number}`);
 
-      // Invoice meta
-      doc.text(`Invoice No: ${bill.billNumber}`, pageWidth - 200, startY);
-      doc.text(
-        `Date: ${new Date(bill.billDate).toLocaleDateString('en-IN')}`,
-        pageWidth - 200,
-        startY + 12
-      );
+  y += 55;
 
-      y += 40;
+  // ===== CUSTOMER + INVOICE BOX =====
+  const boxHeight = 90;
+  doc.rect(left, y, width, boxHeight).stroke();
 
-      // Customer
-      doc.font('Helvetica-Bold').text('Customer Details');
-      doc.font('Helvetica');
-      doc.text(bill.customerName || 'Walk-in Customer');
-      doc.text(bill.customerPhone || '');
+  // Vertical split
+  doc.moveTo(left + width / 2, y)
+     .lineTo(left + width / 2, y + boxHeight)
+     .stroke();
 
-      y += 20;
+  // Customer Details
+  doc.font('Helvetica-Bold').fontSize(9)
+     .text('Customer Details:', left + 5, y + 5);
 
-      // ================= ITEMS TABLE =================
-      const colSno = margin;
-      const colItem = colSno + 30;
-      const colQty = colItem + 250;
-      const colRate = colQty + 60;
-      const colAmt = colRate + 90;
+  doc.font('Helvetica').fontSize(9)
+     .text(`Name: ${bill.customerName}`, left + 5, y + 20)
+     .text(`Ph: ${bill.customerPhone}`, left + 5, y + 35)
+     .text(`Billing Address: ${bill.billingAddress || ''}`, left + 5, y + 50, {
+       width: width / 2 - 10
+     });
 
-      doc.font('Helvetica-Bold').fontSize(9);
-      doc.text('#', colSno, y);
-      doc.text('Item', colItem, y);
-      doc.text('Qty', colQty, y, { align: 'center', width: 50 });
-      doc.text('Rate', colRate, y, { align: 'right', width: 80 });
-      doc.text('Amount', colAmt, y, { align: 'right', width: 80 });
+  // Invoice Details
+  const rx = left + width / 2 + 5;
+  doc.font('Helvetica-Bold').text('Invoice Details:', rx, y + 5);
+  doc.font('Helvetica')
+     .text(`Invoice #: ${bill.billNumber}`, rx, y + 20)
+     .text(`Invoice Date: ${new Date(bill.billDate).toLocaleDateString('en-IN')}`, rx, y + 35)
+     .text(`Place of Supply: ${bill.placeOfSupply}`, rx, y + 50)
+     .text(`Dispatch from: ${shopProfile.shop_name}`, rx, y + 65);
 
-      y += 12;
-      doc.moveTo(margin, y).lineTo(pageWidth - margin, y).stroke();
-      y += 6;
+  y += boxHeight + 10;
 
-      doc.font('Helvetica').fontSize(9);
-      let i = 1;
+  // ===== ITEMS TABLE =====
+  const rowH = 20;
+  const cols = {
+    sno: 30,
+    item: 260,
+    qty: 60,
+    rate: 90,
+    amt: 90
+  };
 
-      bill.items.forEach(item => {
-        const amt = item.quantity * item.rate;
+  const tableWidth = Object.values(cols).reduce((a, b) => a + b, 0);
 
-        doc.text(i++, colSno, y);
-        doc.text(item.name, colItem, y, { width: 240 });
-        doc.text(item.quantity, colQty, y, { align: 'center', width: 50 });
-        doc.text(item.rate.toFixed(2), colRate, y, { align: 'right', width: 80 });
-        doc.text(amt.toFixed(2), colAmt, y, { align: 'right', width: 80 });
+  // Header row
+  doc.rect(left, y, tableWidth, rowH).stroke();
+  let x = left;
 
-        y += 16;
-      });
+  doc.font('Helvetica-Bold').fontSize(9);
+  doc.text('#', x + 5, y + 5); x += cols.sno;
+  doc.text('Item', x + 5, y + 5); x += cols.item;
+  doc.text('Qty', x + 5, y + 5); x += cols.qty;
+  doc.text('Rate / Item', x + 5, y + 5); x += cols.rate;
+  doc.text('Amount', x + 5, y + 5);
 
-      y += 10;
+  y += rowH;
 
-      // ================= TOTALS =================
-      doc.font('Helvetica').fontSize(9);
-      doc.text('Taxable Amount', colRate, y);
-      doc.text(taxableAmount.toFixed(2), colAmt, y, { align: 'right' });
+  // Rows
+  doc.font('Helvetica').fontSize(9);
+  let i = 1;
+  let taxable = 0;
 
-      y += 14;
+  bill.items.forEach(it => {
+    const amt = it.quantity * it.rate;
+    taxable += amt;
 
-      if (isIGST) {
-        doc.text(`IGST ${GST_RATE}%`, colRate, y);
-        doc.text(igst.toFixed(2), colAmt, y, { align: 'right' });
-      } else {
-        doc.text(`CGST ${GST_RATE / 2}%`, colRate, y);
-        doc.text(cgst.toFixed(2), colAmt, y, { align: 'right' });
+    doc.rect(left, y, tableWidth, rowH).stroke();
+    let cx = left;
 
-        y += 14;
-        doc.text(`SGST ${GST_RATE / 2}%`, colRate, y);
-        doc.text(sgst.toFixed(2), colAmt, y, { align: 'right' });
-      }
+    doc.text(i++, cx + 5, y + 5); cx += cols.sno;
+    doc.text(it.name, cx + 5, y + 5, { width: cols.item - 10 }); cx += cols.item;
+    doc.text(it.quantity, cx + 5, y + 5); cx += cols.qty;
+    doc.text(it.rate.toFixed(2), cx + 5, y + 5, { align: 'right', width: cols.rate - 10 }); cx += cols.rate;
+    doc.text(amt.toFixed(2), cx + 5, y + 5, { align: 'right', width: cols.amt - 10 });
 
-      y += 16;
-      doc.font('Helvetica-Bold');
-      doc.text('Grand Total', colRate, y);
-      doc.text(grandTotal.toFixed(2), colAmt, y, { align: 'right' });
+    y += rowH;
+  });
 
-      y += 20;
+  // ===== TAX SUMMARY BOX (RIGHT) =====
+  const taxX = left + tableWidth - 220;
+  const taxY = y + 10;
 
-      // Amount in words
-      doc.font('Helvetica').fontSize(9);
-      doc.text(
-        `Amount Chargeable (in words): INR ${numberToWords(grandTotal)} Only`,
-        margin,
-        y
-      );
+  doc.rect(taxX, taxY, 220, 100).stroke();
+  doc.fontSize(9);
 
-      return startY + INVOICE_HEIGHT;
-    }
+  const GST = bill.gstRate || 5;
+  const isIGST = shopProfile.state !== bill.placeOfSupply;
+  let cgst = 0, sgst = 0, igst = 0;
+
+  if (isIGST) {
+    igst = taxable * GST / 100;
+  } else {
+    cgst = taxable * GST / 2 / 100;
+    sgst = taxable * GST / 2 / 100;
+  }
+
+  let ty = taxY + 10;
+  doc.text('Taxable Amount', taxX + 5, ty);
+  doc.text(taxable.toFixed(2), taxX + 130, ty, { align: 'right' });
+
+  ty += 15;
+  if (isIGST) {
+    doc.text(`IGST ${GST}%`, taxX + 5, ty);
+    doc.text(igst.toFixed(2), taxX + 130, ty, { align: 'right' });
+  } else {
+    doc.text(`CGST ${GST / 2}%`, taxX + 5, ty);
+    doc.text(cgst.toFixed(2), taxX + 130, ty, { align: 'right' });
+
+    ty += 15;
+    doc.text(`SGST ${GST / 2}%`, taxX + 5, ty);
+    doc.text(sgst.toFixed(2), taxX + 130, ty, { align: 'right' });
+  }
+
+  const grand = taxable + cgst + sgst + igst;
+  ty += 20;
+  doc.font('Helvetica-Bold')
+     .text('Total', taxX + 5, ty)
+     .text(grand.toFixed(2), taxX + 130, ty, { align: 'right' });
+
+  // ===== AMOUNT IN WORDS =====
+  y = taxY + 110;
+  doc.font('Helvetica').fontSize(9)
+     .text(`Amount Chargeable (in words): INR ${numberToWords(grand)} Only`, left, y);
+
+  y += 40;
+
+  // ===== FOOTER BOXES =====
+  const footerH = 70;
+  doc.rect(left, y, width, footerH).stroke();
+  doc.moveTo(left + width / 3, y).lineTo(left + width / 3, y + footerH).stroke();
+  doc.moveTo(left + (width * 2) / 3, y).lineTo(left + (width * 2) / 3, y + footerH).stroke();
+
+  doc.fontSize(8).font('Helvetica-Bold')
+     .text('Bank Details:', left + 5, y + 5);
+  doc.font('Helvetica')
+     .text(`Bank: ${shopProfile.bank_name}`, left + 5, y + 20)
+     .text(`A/C: ${shopProfile.account_no}`, left + 5, y + 32)
+     .text(`IFSC: ${shopProfile.ifsc}`, left + 5, y + 44);
+
+  doc.font('Helvetica-Bold')
+     .text('Pay using UPI', left + width / 3 + 5, y + 5);
+  doc.font('Helvetica')
+     .text('No UPI QR configured', left + width / 3 + 5, y + 30);
+
+  doc.font('Helvetica-Bold')
+     .text(`For ${shopProfile.shop_name}`, left + (width * 2) / 3 + 5, y + 5);
+  doc.text('Authorised Signatory', left + (width * 2) / 3 + 5, y + 45);
+
+  return y + footerH;
+}
+
 
     // ================= RENDER BASED ON SIZE =================
     if (isHalf) {
