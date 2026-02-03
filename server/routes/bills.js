@@ -383,6 +383,79 @@ router.get('/:id/download', [auth, authorize(['bills:view'])], async (req, res) 
     res.status(500).json({ message: err.message });
   }
 });
+function numberToWords(amount) {
+  if (amount === 0) return 'Zero Rupees';
+
+  const ones = [
+    '', 'One', 'Two', 'Three', 'Four', 'Five',
+    'Six', 'Seven', 'Eight', 'Nine'
+  ];
+
+  const teens = [
+    'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen',
+    'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'
+  ];
+
+  const tens = [
+    '', '', 'Twenty', 'Thirty', 'Forty',
+    'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'
+  ];
+
+  const convertBelowThousand = num => {
+    let str = '';
+
+    if (num >= 100) {
+      str += ones[Math.floor(num / 100)] + ' Hundred ';
+      num %= 100;
+    }
+
+    if (num >= 20) {
+      str += tens[Math.floor(num / 10)] + ' ';
+      num %= 10;
+    } else if (num >= 10) {
+      str += teens[num - 10] + ' ';
+      return str;
+    }
+
+    if (num > 0) {
+      str += ones[num] + ' ';
+    }
+
+    return str;
+  };
+
+  let [rupees, paise] = amount.toFixed(2).split('.').map(Number);
+
+  let words = '';
+
+  if (rupees >= 10000000) {
+    words += convertBelowThousand(Math.floor(rupees / 10000000)) + 'Crore ';
+    rupees %= 10000000;
+  }
+
+  if (rupees >= 100000) {
+    words += convertBelowThousand(Math.floor(rupees / 100000)) + 'Lakh ';
+    rupees %= 100000;
+  }
+
+  if (rupees >= 1000) {
+    words += convertBelowThousand(Math.floor(rupees / 1000)) + 'Thousand ';
+    rupees %= 1000;
+  }
+
+  if (rupees > 0) {
+    words += convertBelowThousand(rupees);
+  }
+
+  words = words.trim() + ' Rupees';
+
+  if (paise > 0) {
+    words += ' and ' + convertBelowThousand(paise).trim() + ' Paise';
+  }
+
+  return words;
+}
+
 
 
 
