@@ -675,56 +675,8 @@ function numberToWords(num) {
     return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' ' + convertLessThanThousand(n % 100) : '');
   }
   
-  // Handle decimal part (paise) - FIXED: use let instead of const for rupees
-  const [rupeesOriginal, paiseOriginal] = num.toFixed(2).split('.').map(Number);
-  
-  let rupees = rupeesOriginal;  // Use let since we modify it
-  const paise = paiseOriginal;
-  
-  let result = '';
-  
-  if (rupees >= 10000000) {
-    result += convertLessThanThousand(Math.floor(rupees / 10000000)) + ' Crore ';
-    rupees %= 10000000;
-  }
-  if (rupees >= 100000) {
-    result += convertLessThanThousand(Math.floor(rupees / 100000)) + ' Lakh ';
-    rupees %= 100000;
-  }
-  if (rupees >= 1000) {
-    result += convertLessThanThousand(Math.floor(rupees / 1000)) + ' Thousand ';
-    rupees %= 1000;
-  }
-  if (rupees > 0) {
-    result += convertLessThanThousand(rupees);
-  }
-  
-  result = 'Rupees ' + result.trim();
-  
-  if (paise > 0) {
-    result += ' and ' + convertLessThanThousand(paise) + ' Paise';
-  }
-  
-  return result;
-}
-// Helper function: Convert number to words (Indian numbering system)
-function numberToWords(num) {
-  if (num === 0) return 'Zero';
-  
-  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
-  const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-  
-  function convertLessThanThousand(n) {
-    if (n === 0) return '';
-    if (n < 10) return ones[n];
-    if (n < 20) return teens[n - 10];
-    if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + ones[n % 10] : '');
-    return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' ' + convertLessThanThousand(n % 100) : '');
-  }
-  
   // Handle decimal part (paise)
-  const [rupees, paise] = num.toFixed(2).split('.').map(Number);
+  let [rupees, paise] = num.toFixed(2).split('.').map(Number);
   
   let result = '';
   
