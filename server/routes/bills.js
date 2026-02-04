@@ -11,6 +11,7 @@ const authorize = require('../middleware/authorize');
 const path = require('path');
 const fs = require('fs');
 const PDFDocument = require('pdfkit');
+const axios = require('axios')
 
 // GET all bills
 router.get('/', [auth, authorize(['bills:view'])], async (req, res) => {
