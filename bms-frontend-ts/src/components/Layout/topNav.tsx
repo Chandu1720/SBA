@@ -89,11 +89,8 @@ const TopNav: React.FC<TopNavProps> = ({ toggleSidebar }) => {
           >
             <Menu size={24} />
           </button>
-          <Link
-            to="/"
-            className="text-2xl font-extrabold tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500"
-          >
-            BMS
+          <Link to="/" className="flex items-center">
+            <img src="/logonew.png" alt="BMS Logo" className="h-10" />
           </Link>
         </div>
 
