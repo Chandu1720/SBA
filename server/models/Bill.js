@@ -140,32 +140,32 @@ const billSchema = new mongoose.Schema({
 
 const Bill = mongoose.model('Bill', billSchema);
 module.exports = Bill;
-```
+// ```
 
-**What was added and why:**
+// **What was added and why:**
 
-**Line-item level:**
-- `discountType` — whether the discount is a `Percentage` (e.g. 10%) or a `Flat` amount (e.g. ₹50)
-- `discountValue` — the raw input value (10 for 10%, or 50 for ₹50)
-- `discountAmount` — the computed discount in rupees, store this so you don't recalculate every time
-- `total` now represents the final amount after applying per-item discount and tax
+// **Line-item level:**
+// - `discountType` — whether the discount is a `Percentage` (e.g. 10%) or a `Flat` amount (e.g. ₹50)
+// - `discountValue` — the raw input value (10 for 10%, or 50 for ₹50)
+// - `discountAmount` — the computed discount in rupees, store this so you don't recalculate every time
+// - `total` now represents the final amount after applying per-item discount and tax
 
-**Bill level:**
-- `subTotal` — sum of `rate × quantity` across all items, before any discount or tax
-- `billDiscountType` / `billDiscountValue` / `billDiscountAmount` — same pattern as line-item but applied to the whole bill (useful for coupons, loyalty discounts, etc.)
-- `totalTax` — aggregated tax across all line items, handy for GST breakdowns
+// **Bill level:**
+// - `subTotal` — sum of `rate × quantity` across all items, before any discount or tax
+// - `billDiscountType` / `billDiscountValue` / `billDiscountAmount` — same pattern as line-item but applied to the whole bill (useful for coupons, loyalty discounts, etc.)
+// - `totalTax` — aggregated tax across all line items, handy for GST breakdowns
 
-**Calculation flow to use in your controller:**
-```
-discountAmount  = discountType === 'Percentage'
-                    ? (rate × quantity × discountValue / 100)
-                    : discountValue
+// **Calculation flow to use in your controller:**
+// ```
+// discountAmount  = discountType === 'Percentage'
+//                     ? (rate × quantity × discountValue / 100)
+//                     : discountValue
 
-itemTotal       = (rate × quantity) - discountAmount + taxAmount
+// itemTotal       = (rate × quantity) - discountAmount + taxAmount
 
-subTotal        = sum of all (rate × quantity)
-billDiscount    = billDiscountType === 'Percentage'
-                    ? (subTotal × billDiscountValue / 100)
-                    : billDiscountValue
+// subTotal        = sum of all (rate × quantity)
+// billDiscount    = billDiscountType === 'Percentage'
+//                     ? (subTotal × billDiscountValue / 100)
+//                     : billDiscountValue
 
-grandTotal      = subTotal - billDiscountAmount + totalTax
+// grandTotal      = subTotal - billDiscountAmount + totalTax
